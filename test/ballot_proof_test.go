@@ -1,144 +1,206 @@
 package test
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"log"
-	"math"
 	"math/big"
-	"os"
 	"testing"
+	"os"
 
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/poseidon2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vocdoni/z-ircuits/utils"
-	"go.vocdoni.io/dvote/crypto/ethereum"
-	"go.vocdoni.io/dvote/util"
 )
 
+func randomBytes(n int) []byte {
+	b := make([]byte, n)
+	rand.Read(b)
+	return b
+}
+
 func TestBallotProof(t *testing.T) {
-	if persist && testID == "" {
-		t.Error("Test ID is required when persisting")
-		return
-	}
+	nFields := 8
+	maxValue := 16
+	maxValueSum := 1125
+	minValue := 0
+	minValueSum := 5
+	uniqueValues := 1
+	costExponent := 2
+	costFromWeight := 0
+	numFields := 5
 
-	acc := ethereum.NewSignKeys()
-	if err := acc.Generate(); err != nil {
-		t.Error(err)
-		return
+	// Generate random inputs
+	fields := make([]int, nFields)
+	for i := 0; i < 5; i++ {
+		fields[i] = i + 1
 	}
-	var (
-		// ballot inputs
-		fields = []*big.Int{
-			big.NewInt(3),
-			big.NewInt(5),
-			big.NewInt(2),
-			big.NewInt(4),
-			big.NewInt(1),
-		}
-		n_fields        = 8
-		numFields       = 5
-		maxValue        = 16
-		minValue        = 0
-		costExp         = 2
-		forceUniqueness = 1
-		weight          = 1
-		costFromWeight  = 0
-		// nullifier inputs
-		address   = acc.Address().Bytes()
-		processID = util.RandomBytes(20)
-		// circuit assets
-		wasmFile = "../artifacts/ballot_proof_test.wasm"
-		zkeyFile = "../artifacts/ballot_proof_test_pkey.zkey"
-		vkeyFile = "../artifacts/ballot_proof_test_vkey.json"
-	)
-	// encrypt ballot
-	_, pubKey := utils.GenerateKeyPair()
+	weight := 1
+
+	_, pubkey := utils.GenerateKeyPair()
 	k, err := utils.RandomK()
-	if err != nil {
-		t.Errorf("Error generating random k: %v\n", err)
-		return
+	require.NoError(t, err)
+
+	cipherfields := make([][2][2]*big.Int, nFields)
+	for i := 0; i < nFields; i++ {
+		c1, c2 := utils.Encrypt(big.NewInt(int64(fields[i])), pubkey, k)
+		// c1 is [2]big.Int
+		c1x := new(big.Int).Set(&c1[0])
+		c1y := new(big.Int).Set(&c1[1])
+		c2x := new(big.Int).Set(&c2[0])
+		c2y := new(big.Int).Set(&c2[1])
+		
+		cipherfields[i] = [2][2]*big.Int{
+			{c1x, c1y},
+			{c2x, c2y},
+		}
 	}
 
-cipherfields, plainCipherfields := utils.CipherBallotFields(fields, n_fields, pubKey, k)
+	processID := randomBytes(20)
+	address := randomBytes(20)
+
 	bigPID := new(big.Int).SetBytes(processID)
 	bigAddr := new(big.Int).SetBytes(address)
-	voteID, err := utils.VoteID(bigPID, bigAddr, k)
-	if err != nil {
-		t.Errorf("Error generating vote ID: %v\n", err)
-		return
-	}
 
-	// Calculate inputs hash
-	bigInputs := []*big.Int{
-		bigPID,
-		big.NewInt(int64(numFields)),
-		big.NewInt(int64(forceUniqueness)),
-		big.NewInt(int64(maxValue)),
-		big.NewInt(int64(minValue)),
-		big.NewInt(int64(math.Pow(float64(maxValue-1), float64(costExp))) * int64(numFields)),
-		big.NewInt(int64(numFields)),
-		big.NewInt(int64(costExp)),
-		big.NewInt(int64(costFromWeight)),
-		&pubKey.X,
-		&pubKey.Y,
-		bigAddr,
-		voteID,
-	}
-	bigInputs = append(bigInputs, plainCipherfields...)
-	bigInputs = append(bigInputs, big.NewInt(int64(weight)))
-	inputsHash, err := utils.MiMCHash(bigInputs...)
-	if err != nil {
-		log.Fatalf("Error hashing inputs: %v\n", err)
-		return
-	}
+	// Calculate VoteID using Poseidon2
+	h := poseidon2.NewMerkleDamgardHasher()
+	var e fr.Element
+	e.SetBigInt(bigPID)
+	b := e.Bytes()
+	h.Write(b[:])
+	e.SetBigInt(bigAddr)
+	b = e.Bytes()
+	h.Write(b[:])
+	e.SetBigInt(k)
+	b = e.Bytes()
+	h.Write(b[:])
+	
+	res := h.Sum(nil)
+	var voteID fr.Element
+	voteID.SetBytes(res)
+	
+	hashBig := new(big.Int)
+	voteID.BigInt(hashBig)
+	mask := new(big.Int).Lsh(big.NewInt(1), 160)
+	mask.Sub(mask, big.NewInt(1))
+	voteIDTrunc := new(big.Int).And(hashBig, mask)
 
-	// circuit inputs
+	// Calculate inputs_hash using Poseidon2
+	h2 := poseidon2.NewMerkleDamgardHasher()
+	for i := 0; i < nFields; i++ {
+		e.SetUint64(uint64(fields[i]))
+		b = e.Bytes()
+		h2.Write(b[:])
+	}
+	e.SetUint64(uint64(weight))
+	b = e.Bytes()
+	h2.Write(b[:])
+	
+	e.SetBigInt(&pubkey.X)
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetBigInt(&pubkey.Y)
+	b = e.Bytes()
+	h2.Write(b[:])
+	
+	for i := 0; i < nFields; i++ {
+		e.SetBigInt(cipherfields[i][0][0])
+		b = e.Bytes()
+		h2.Write(b[:])
+		e.SetBigInt(cipherfields[i][0][1])
+		b = e.Bytes()
+		h2.Write(b[:])
+		e.SetBigInt(cipherfields[i][1][0])
+		b = e.Bytes()
+		h2.Write(b[:])
+		e.SetBigInt(cipherfields[i][1][1])
+		b = e.Bytes()
+		h2.Write(b[:])
+	}
+	
+	e.SetBigInt(bigPID)
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetBigInt(bigAddr)
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetBigInt(k)
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetBigInt(voteIDTrunc)
+	b = e.Bytes()
+	h2.Write(b[:])
+	
+	// Validation params
+	e.SetUint64(uint64(numFields))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(uniqueValues))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(maxValue))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(minValue))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(maxValueSum))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(minValueSum))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(costExponent))
+	b = e.Bytes()
+	h2.Write(b[:])
+	e.SetUint64(uint64(costFromWeight))
+	b = e.Bytes()
+	h2.Write(b[:])
+
+	inputsHashRes := h2.Sum(nil)
+	var inputsHash fr.Element
+	inputsHash.SetBytes(inputsHashRes)
+
 	inputs := map[string]any{
-		"fields":            utils.BigIntArrayToStringArray(fields, n_fields),
-		"num_fields":        fmt.Sprint(numFields),
-		"unique_values":     fmt.Sprint(forceUniqueness),
-		"max_value":         fmt.Sprint(maxValue),
-		"min_value":         fmt.Sprint(minValue),
-		"cost_exponent":     fmt.Sprint(costExp),
-		"max_value_sum":     fmt.Sprint(int(math.Pow(float64(maxValue-1), float64(costExp))) * numFields),
-		"min_value_sum":     fmt.Sprint(numFields),
-		"cost_from_weight":  fmt.Sprint(costFromWeight),
-		"weight":            fmt.Sprint(weight),
-		"encryption_pubkey": []string{pubKey.X.String(), pubKey.Y.String()},
-		"k":                 k.String(),
+		"fields":            fields,
+		"weight":            weight,
+		"encryption_pubkey": []string{pubkey.X.String(), pubkey.Y.String()},
 		"cipherfields":      cipherfields,
-		"address":           bigAddr.String(),
 		"process_id":        bigPID.String(),
-		"vote_id":           voteID.String(),
+		"address":           bigAddr.String(),
+		"k":                 k.String(),
+		"vote_id":           voteIDTrunc.String(),
 		"inputs_hash":       inputsHash.String(),
+		"num_fields":        numFields,
+		"unique_values":     uniqueValues,
+		"max_value":         maxValue,
+		"min_value":         minValue,
+		"max_value_sum":     maxValueSum,
+		"min_value_sum":     minValueSum,
+		"cost_exponent":     costExponent,
+		"cost_from_weight":  costFromWeight,
 	}
-	bInputs, _ := json.MarshalIndent(inputs, "  ", "  ")
-	t.Log("Inputs:", string(bInputs))
-	proofData, pubSignals, err := utils.CompileAndGenerateProof(bInputs, wasmFile, zkeyFile)
-	if err != nil {
-		t.Errorf("Error compiling and generating proof: %v\n", err)
-		return
+
+	inputBytes, err := json.MarshalIndent(inputs, "", "  ")
+	require.NoError(t, err)
+	if persist && testID != "" {
+		_ = os.WriteFile(fmt.Sprintf("artifacts/%s_input.json", testID), inputBytes, 0644)
 	}
-	t.Log("Proof:", proofData)
-	t.Log("Public signals:", pubSignals)
-	// read vkey file
-	vkey, err := os.ReadFile(vkeyFile)
-	if err != nil {
-		t.Errorf("Error reading vkey file: %v\n", err)
-		return
-	}
-	if err := utils.VerifyProof(proofData, pubSignals, vkey); err != nil {
-		t.Errorf("Error verifying proof: %v\n", err)
-		return
-	}
-	log.Println("Proof verified")
-	if persist {
-		if err := os.WriteFile(fmt.Sprintf("./%s_proof.json", testID), []byte(proofData), 0o644); err != nil {
-			t.Errorf("Error writing proof file: %v\n", err)
-			return
-		}
-		if err := os.WriteFile(fmt.Sprintf("./%s_pub_signals.json", testID), []byte(pubSignals), 0o644); err != nil {
-			t.Errorf("Error writing public signals file: %v\n", err)
-			return
-		}
-	}
+
+	// Generate proof
+	proof, publicSignals, err := utils.CompileAndGenerateProof(
+		inputBytes,
+		"artifacts/ballot_proof_test.wasm",
+		"artifacts/ballot_proof_test_pkey.zkey",
+	)
+	require.NoError(t, err)
+
+	// Verify proof
+	vkey, err := os.ReadFile("artifacts/ballot_proof_test_vkey.json")
+	require.NoError(t, err)
+
+	err = utils.VerifyProof(proof, publicSignals, vkey)
+	assert.NoError(t, err)
 }

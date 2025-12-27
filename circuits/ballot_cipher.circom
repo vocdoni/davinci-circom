@@ -1,7 +1,7 @@
 pragma circom 2.1.0;
 
 include "comparators.circom";
-include "mimc.circom";
+include "poseidon2.circom";
 include "./lib/elgamal.circom";
 
 template FieldComparator() {
@@ -42,13 +42,12 @@ template BallotCipher(n_fields) {
     signal sum[n_fields + 1];
     sum[0] <== 0;
     // calculate the different k's derived from the provided one using recursive
-    // mimc7 hashing
+    // poseidon2 hashing
     signal ks[n_fields + 1];
     ks[0] <== k;
     component k_hasher[n_fields];
     for (var i = 0; i < n_fields; i++) {
-        k_hasher[i] = MultiMiMC7(1, 62);
-        k_hasher[i].k <== 0;
+        k_hasher[i] = Poseidon2Hash(1);
         k_hasher[i].in[0] <== ks[i];
         ks[i+1] <== k_hasher[i].out;
     }

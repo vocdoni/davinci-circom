@@ -55,7 +55,6 @@ if [ ! -d "$SNARKJS_DIR" ]; then
     echo "snarkjs (p4u fork) not found, cloning..."
     git clone https://github.com/p4u/snarkjs.git "$SNARKJS_DIR"
     cd "$SNARKJS_DIR"
-    # Initializing submodules as per instructions (ffjavascript, wasmcurves)
     git submodule update --init --recursive
     npm install
     cd -
@@ -71,7 +70,10 @@ npm install circomlib
 for C in $CIRCUIT; do
   # compile the circuit
   echo "=> Compiling circuit $C"
-  $CIRCOM_BIN $C --r1cs --wasm --sym --prime bls12377 -o $ARTIFACTS_DIR -l ./circuits/lib/bls12377 -l ./node_modules/circomlib/circuits
+  $CIRCOM_BIN $C --r1cs --wasm --sym --prime bls12377 -o $ARTIFACTS_DIR \
+    -l ./circuits/lib/bls12377 \
+    -l ./node_modules/circomlib/circuits \
+    -l "$DEPS_DIR/circom-ecdsa/circuits"
   
   # check if ptau file exists, if not generate it for bls12377
   if [ ! -f "$ARTIFACTS_DIR/ptau" ]; then
@@ -91,7 +93,9 @@ for C in $CIRCUIT; do
   $SNARKJS zkey export verificationkey $ARTIFACTS_DIR/$NAME\_pkey.zkey $ARTIFACTS_DIR/$NAME\_vkey.json
   
   # mv wasm from $ARTIFACTS/$NAME_js/$NAME.wasm to $ARTIFACTS/$NAME.wasm
-  mv $ARTIFACTS_DIR/$NAME\_js/$NAME.wasm $ARTIFACTS_DIR/$NAME.wasm
+  if [ -f "$ARTIFACTS_DIR/$NAME\_js/$NAME.wasm" ]; then
+    mv $ARTIFACTS_DIR/$NAME\_js/$NAME.wasm $ARTIFACTS_DIR/$NAME.wasm
+  fi
 done
   
 # clean up

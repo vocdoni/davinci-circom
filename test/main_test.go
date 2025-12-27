@@ -2,20 +2,17 @@ package test
 
 import (
 	"flag"
+	"os"
 	"testing"
 )
 
-var (
-	testID  string
-	persist bool
-	path    string
-)
+var persist bool
+var testID string
 
 func TestMain(m *testing.M) {
-	flag.StringVar(&testID, "testID", "", "Test ID")
-	flag.BoolVar(&persist, "persist", false, "Persist the test data")
-	flag.StringVar(&path, "path", "./testdata", "Path to store the test data")
+	flag.BoolVar(&persist, "persist", false, "persist input files for debugging")
+	flag.StringVar(&testID, "test-id", "", "id for persisted files")
 	flag.Parse()
 
-	m.Run()
+	os.Exit(m.Run())
 }

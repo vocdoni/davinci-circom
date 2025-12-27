@@ -1,19 +1,52 @@
-pragma circom 2.1.0;
+pragma circom 2.0.0;
 
-include "mimc.circom";
-include "./ballot_checker.circom";
-include "./ballot_cipher.circom";
-include "./lib/vote_id.circom";
+include "ballot_checker.circom";
+include "ballot_cipher.circom";
+include "poseidon2.circom";
+include "bitify.circom";
 
-// BallotProof is the circuit to prove a valid vote in the Vocdoni scheme. The 
-// vote is valid if it meets the Ballot Protocol requirements, but also if the
-// encrypted vote provided matches with the raw vote encrypted in this circuit.
-// The circuit checks the the vote over the params provided using the 
-// BallotProtocol template, encodes the vote using the BallotEncoder template
-// and compares the result with the encrypted vote.
+// VoteIDChecker computes the VoteID from process_id, address, and k.
+// VoteID = Hash(process_id, address, k) & ((1 << 160) - 1)
+template VoteIDChecker() {
+    signal input process_id;
+    signal input address;
+    signal input k;
+    signal input vote_id;
+
+    component hasher = Poseidon2Hash(3);
+    hasher.in[0] <== process_id;
+    hasher.in[1] <== address;
+    hasher.in[2] <== k;
+
+    // Truncate hash to 160 bits to get VoteID
+    component n2b = Num2Bits(254);
+    n2b.in <== hasher.out;
+
+    component b2n = Bits2Num(160);
+    for (var i = 0; i < 160; i++) {
+        b2n.in[i] <== n2b.out[i];
+    }
+
+    vote_id === b2n.out;
+}
+
+// BallotProof verifies the validity of a vote and its encryption.
+// It also checks that the hash of all public/private inputs matches the provided one.
 template BallotProof(n_fields) {
-    // Ballot inputs
+    // Public inputs
+    signal input inputs_hash;
+
+    // Private inputs
     signal input fields[n_fields];
+    signal input weight;
+    signal input encryption_pubkey[2];
+    signal input cipherfields[n_fields][2][2];
+    signal input process_id;
+    signal input address;
+    signal input k;
+    signal input vote_id;
+
+    // Validation parameters (passed as signals)
     signal input num_fields;
     signal input unique_values;
     signal input max_value;
@@ -22,83 +55,85 @@ template BallotProof(n_fields) {
     signal input min_value_sum;
     signal input cost_exponent;
     signal input cost_from_weight;
-    signal input address;
-    signal input weight;
-    signal input process_id;
-    signal input vote_id;
-    // ElGamal inputs
-    signal input encryption_pubkey[2];
-    signal input k;
-    signal input cipherfields[n_fields][2][2];
-    // Inputs hash
-    signal input inputs_hash;
-    // 0. Check the hash of the inputs (all pubprivate inputs)
-    //  a. ProcessID
-    //  b. Ballot metadata:
-    //      - num_fields
-    //      - unique_values
-    //      - max_value
-    //      - min_value
-    //      - max_value_sum
-    //      - min_value_sum
-    //      - cost_exponent
-    //      - cost_from_weight
-    //  c. Public encryption key (encryption_pubkey[2])
-    //  d. Address
-    //  e. VoteID
-    //  f. Cipherfields[n_fields][2][2]
-    //  g. Weight
-    var static_inputs = 14; // including 2 of the encryption_pubkey
-    var cipherfields_inputs = 4 * n_fields;
-    var n_inputs = cipherfields_inputs + static_inputs;
-    component inputs_hasher = MultiMiMC7(n_inputs, 62);
-    inputs_hasher.k <== 0;
-    var i = 0;
-    inputs_hasher.in[i] <== process_id; i++;        // Process.ID
-    inputs_hasher.in[i] <== num_fields; i++;         // Process.BallotMode
-    inputs_hasher.in[i] <== unique_values; i++;  // Process.BallotMode
-    inputs_hasher.in[i] <== max_value; i++;         // Process.BallotMode
-    inputs_hasher.in[i] <== min_value; i++;         // Process.BallotMode
-    inputs_hasher.in[i] <== max_value_sum; i++;    // Process.BallotMode
-    inputs_hasher.in[i] <== min_value_sum; i++;    // Process.BallotMode
-    inputs_hasher.in[i] <== cost_exponent; i++;          // Process.BallotMode
-    inputs_hasher.in[i] <== cost_from_weight; i++;  // Process.BallotMode
-    inputs_hasher.in[i] <== encryption_pubkey[0]; i++;             // Process.EncryptionKey
-    inputs_hasher.in[i] <== encryption_pubkey[1]; i++;             // Process.EncryptionKey
-    inputs_hasher.in[i] <== address; i++;           // Vote.Address
-    inputs_hasher.in[i] <== vote_id; i++;           // Vote.ID
-    for (var f = 0; f < n_fields; f++) {
-        inputs_hasher.in[i] <== cipherfields[f][0][0]; i++; // Vote.Ballot
-        inputs_hasher.in[i] <== cipherfields[f][0][1]; i++; // Vote.Ballot
-        inputs_hasher.in[i] <== cipherfields[f][1][0]; i++; // Vote.Ballot
-        inputs_hasher.in[i] <== cipherfields[f][1][1]; i++; // Vote.Ballot
+
+    // 1. Check Ballot Validity
+    component checker = BallotChecker(n_fields);
+    for (var i = 0; i < n_fields; i++) {
+        checker.fields[i] <== fields[i];
     }
-    inputs_hasher.in[i] <== weight; i++; // UserWeight
-    inputs_hasher.out === inputs_hash;
-    // 1. Check the vote meets the ballot requirements
-    component ballotProtocol = BallotChecker(n_fields);
-    ballotProtocol.fields <== fields;
-    ballotProtocol.num_fields <== num_fields;
-    ballotProtocol.unique_values <== unique_values;
-    ballotProtocol.max_value <== max_value;
-    ballotProtocol.min_value <== min_value;
-    ballotProtocol.max_value_sum <== max_value_sum;
-    ballotProtocol.min_value_sum <== min_value_sum;
-    ballotProtocol.cost_exponent <== cost_exponent;
-    ballotProtocol.cost_from_weight <== cost_from_weight;
-    ballotProtocol.weight <== weight;
-    // 2.  Check the encrypted vote
-    component ballotCipher = BallotCipher(n_fields);
-    ballotCipher.encryption_pubkey <== encryption_pubkey;
-    ballotCipher.k <== k;
-    ballotCipher.fields <== fields;
-    ballotCipher.mask <== ballotProtocol.mask;
-    ballotCipher.cipherfields <== cipherfields;
-    ballotCipher.valid_fields === num_fields;
-    // 3. Check the vote ID
+    checker.weight <== weight;
+    checker.num_fields <== num_fields;
+    checker.unique_values <== unique_values;
+    checker.max_value <== max_value;
+    checker.min_value <== min_value;
+    checker.max_value_sum <== max_value_sum;
+    checker.min_value_sum <== min_value_sum;
+    checker.cost_exponent <== cost_exponent;
+    checker.cost_from_weight <== cost_from_weight;
+
+    // 2. Check Ballot Encryption
+    component cipher = BallotCipher(n_fields);
+    for (var i = 0; i < n_fields; i++) {
+        cipher.fields[i] <== fields[i];
+        cipher.mask[i] <== checker.mask[i];
+        cipher.cipherfields[i] <== cipherfields[i];
+    }
+    cipher.encryption_pubkey <== encryption_pubkey;
+    cipher.k <== k;
+    
+    // num_fields must match successfully encrypted and valid fields
+    cipher.valid_fields === num_fields;
+
+    // 3. Check Vote ID
     component voteIDChecker = VoteIDChecker();
     voteIDChecker.process_id <== process_id;
     voteIDChecker.address <== address;
     voteIDChecker.k <== k;
     voteIDChecker.vote_id <== vote_id;
+
+    // 4. Verify inputs_hash
+    var n_inputs = n_fields + 1 + 2 + n_fields * 4 + 1 + 1 + 1 + 1 + 8;
+    component inputs_hasher = Poseidon2Hash(n_inputs);
+    
+    var idx = 0;
+    for (var i = 0; i < n_fields; i++) {
+        inputs_hasher.in[idx] <== fields[i];
+        idx++;
+    }
+    inputs_hasher.in[idx] <== weight;
+    idx++;
+    inputs_hasher.in[idx] <== encryption_pubkey[0];
+    idx++;
+    inputs_hasher.in[idx] <== encryption_pubkey[1];
+    idx++;
+    for (var i = 0; i < n_fields; i++) {
+        inputs_hasher.in[idx] <== cipherfields[i][0][0];
+        idx++;
+        inputs_hasher.in[idx] <== cipherfields[i][0][1];
+        idx++;
+        inputs_hasher.in[idx] <== cipherfields[i][1][0];
+        idx++;
+        inputs_hasher.in[idx] <== cipherfields[i][1][1];
+        idx++;
+    }
+    inputs_hasher.in[idx] <== process_id;
+    idx++;
+    inputs_hasher.in[idx] <== address;
+    idx++;
+    inputs_hasher.in[idx] <== k;
+    idx++;
+    inputs_hasher.in[idx] <== vote_id;
+    idx++;
+    
+    // Validation params
+    inputs_hasher.in[idx] <== num_fields; idx++;
+    inputs_hasher.in[idx] <== unique_values; idx++;
+    inputs_hasher.in[idx] <== max_value; idx++;
+    inputs_hasher.in[idx] <== min_value; idx++;
+    inputs_hasher.in[idx] <== max_value_sum; idx++;
+    inputs_hasher.in[idx] <== min_value_sum; idx++;
+    inputs_hasher.in[idx] <== cost_exponent; idx++;
+    inputs_hasher.in[idx] <== cost_from_weight; idx++;
+
+    inputs_hash === inputs_hasher.out;
 }
