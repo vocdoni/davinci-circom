@@ -47,7 +47,7 @@ template BallotCipher(n_fields) {
     ks[0] <== k;
     component k_hasher[n_fields];
     for (var i = 0; i < n_fields; i++) {
-        k_hasher[i] = MultiMiMC7(1, 91);
+        k_hasher[i] = MultiMiMC7(1, 62);
         k_hasher[i].k <== 0;
         k_hasher[i].in[0] <== ks[i];
         ks[i+1] <== k_hasher[i].out;

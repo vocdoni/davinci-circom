@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3-crypto/mimc7"
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"go.vocdoni.io/dvote/util"
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/mimc"
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/twistededwards"
 )
 
 func BigIntArrayToN(arr []*big.Int, n int) []*big.Int {
@@ -32,60 +31,28 @@ func BigIntArrayToStringArray(arr []*big.Int, n int) []string {
 }
 
 func RandomK() (*big.Int, error) {
-	// Generate random scalar k
-	kBytes := make([]byte, 32)
-	_, err := rand.Read(kBytes)
+	curve := twistededwards.GetEdwardsCurve()
+	// Generate random scalar k mod curve.Order
+	k, err := rand.Int(rand.Reader, &curve.Order)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate random k: %v", err)
 	}
-
-	k := new(big.Int).SetBytes(kBytes)
-	k.Mod(k, babyjub.SubOrder)
 	return k, nil
 }
 
-func MultiPoseidon(inputs ...*big.Int) (*big.Int, error) {
-	if len(inputs) > 256 {
-		return nil, fmt.Errorf("too many inputs")
-	} else if len(inputs) == 0 {
-		return nil, fmt.Errorf("no inputs provided")
-	}
-	// calculate chunk hashes
-	hashes := []*big.Int{}
-	chunk := []*big.Int{}
+func MiMCHash(inputs ...*big.Int) (*big.Int, error) {
+	h := mimc.NewFieldHasher()
 	for _, input := range inputs {
-		if len(chunk) == 16 {
-			hash, err := poseidon.Hash(chunk)
-			if err != nil {
-				return nil, err
-			}
-			hashes = append(hashes, hash)
-			chunk = []*big.Int{}
-		}
-		chunk = append(chunk, input)
+		var e fr.Element
+		e.SetBigInt(input)
+		h.WriteElement(e)
 	}
-	// if the final chunk is not empty, hash it to get the last chunk hash
-	if len(chunk) > 0 {
-		hash, err := poseidon.Hash(chunk)
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, hash)
-	}
-	// if there is only one chunk hash, return it
-	if len(hashes) == 1 {
-		return hashes[0], nil
-	}
-	// return the hash of all chunk hashes
-	return poseidon.Hash(hashes)
+	res := h.SumElement()
+	return res.BigInt(new(big.Int)), nil
 }
 
 func VoteID(bigPID, bigAddr, k *big.Int) (*big.Int, error) {
-	hash, err := mimc7.Hash([]*big.Int{
-		util.BigToFF(bigPID),
-		util.BigToFF(bigAddr),
-		util.BigToFF(k),
-	}, nil)
+	hash, err := MiMCHash(bigPID, bigAddr, k)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate vote ID: %v", err)
 	}

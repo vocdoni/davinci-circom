@@ -15,6 +15,12 @@ if [ ! -d "$ARTIFACTS_DIR" ]; then
     mkdir "$ARTIFACTS_DIR"
 fi
 
+# Create deps directory
+DEPS_DIR="$PWD/deps"
+if [ ! -d "$DEPS_DIR" ]; then
+    mkdir "$DEPS_DIR"
+fi
+
 # check if npm is installed
 if [ ! command -v npm &> /dev/null ]; then
     echo "npm is not installed"
@@ -29,23 +35,33 @@ fi
 
 echo '{"name": "davinci-circom-circuits"}' > ./package.json
 
-# check if circom is installed
-if [ ! command -v circom --version &> /dev/null ]; then
-    echo "circom is not installed, installing..."
-    git clone https://github.com/iden3/circom.git
-    cd circom
+# Check/Install Circom
+CIRCOM_BIN="$DEPS_DIR/circom/target/release/circom"
+if [ ! -f "$CIRCOM_BIN" ]; then
+    echo "circom not found, installing in $DEPS_DIR..."
+    if [ ! -d "$DEPS_DIR/circom" ]; then
+        git clone https://github.com/iden3/circom.git "$DEPS_DIR/circom"
+    fi
+    cd "$DEPS_DIR/circom"
     cargo build --release
-    cargo install --path circom
-    circom --version
+    cd -
 fi
 
-# check if snarkjs is installed
-if [ ! command -v snarkjs &> /dev/null ]; then
-    echo "snarkjs is not installed, installing..."
-    npm install -g snarkjs
+# Check/Install SnarkJS (Custom fork with BLS12-377)
+SNARKJS_DIR="$DEPS_DIR/snarkjs"
+SNARKJS="node $SNARKJS_DIR/cli.js"
+
+if [ ! -d "$SNARKJS_DIR" ]; then
+    echo "snarkjs (p4u fork) not found, cloning..."
+    git clone https://github.com/p4u/snarkjs.git "$SNARKJS_DIR"
+    cd "$SNARKJS_DIR"
+    # Initializing submodules as per instructions (ffjavascript, wasmcurves)
+    git submodule update --init --recursive
+    npm install
+    cd -
 fi
 
-# install circomlib
+# install circomlib in local package
 npm install circomlib
 
 [ "$CIRCUIT" == "all" ] && {
@@ -55,25 +71,28 @@ npm install circomlib
 for C in $CIRCUIT; do
   # compile the circuit
   echo "=> Compiling circuit $C"
-  circom $C --r1cs --wasm --sym -o $ARTIFACTS_DIR -l ./node_modules/circomlib/circuits
+  $CIRCOM_BIN $C --r1cs --wasm --sym --prime bls12377 -o $ARTIFACTS_DIR -l ./circuits/lib/bls12377 -l ./node_modules/circomlib/circuits
   
-  # check if ptau file exists, if not download it from https://pse-trusted-setup-ppot.s3.eu-central-1.amazonaws.com/pot28_0080/ppot_0080_20.ptau
+  # check if ptau file exists, if not generate it for bls12377
   if [ ! -f "$ARTIFACTS_DIR/ptau" ]; then
-      echo "Downloading ptau file..."
-      wget https://pse-trusted-setup-ppot.s3.eu-central-1.amazonaws.com/pot28_0080/ppot_0080_18.ptau -O $ARTIFACTS_DIR/ptau
+      echo "Generating ptau file for bls12377..."
+      $SNARKJS powersoftau new bls12377 17 $ARTIFACTS_DIR/ptau_0.ptau -v
+      $SNARKJS powersoftau contribute $ARTIFACTS_DIR/ptau_0.ptau $ARTIFACTS_DIR/ptau_1.ptau --name="First contribution" -v -e="some random text"
+      $SNARKJS powersoftau prepare phase2 $ARTIFACTS_DIR/ptau_1.ptau $ARTIFACTS_DIR/ptau.ptau -v
+      mv $ARTIFACTS_DIR/ptau.ptau $ARTIFACTS_DIR/ptau
   fi
   
   # generate the trusted setup
   NAME=$(basename $C .circom)
   R1CS=$ARTIFACTS_DIR/$NAME.r1cs
-  snarkjs groth16 setup $R1CS $ARTIFACTS_DIR/ptau $ARTIFACTS_DIR/$NAME\_pkey.zkey
+  $SNARKJS groth16 setup $R1CS $ARTIFACTS_DIR/ptau $ARTIFACTS_DIR/$NAME\_pkey.zkey
   
   # export the verification key
-  snarkjs zkey export verificationkey $ARTIFACTS_DIR/$NAME\_pkey.zkey $ARTIFACTS_DIR/$NAME\_vkey.json
+  $SNARKJS zkey export verificationkey $ARTIFACTS_DIR/$NAME\_pkey.zkey $ARTIFACTS_DIR/$NAME\_vkey.json
   
   # mv wasm from $ARTIFACTS/$NAME_js/$NAME.wasm to $ARTIFACTS/$NAME.wasm
   mv $ARTIFACTS_DIR/$NAME\_js/$NAME.wasm $ARTIFACTS_DIR/$NAME.wasm
 done
   
 # clean up
-rm -rf ./node_modules package-lock.json package.json $ARTIFACTS_DIR/$NAME\_js
+rm -rf ./node_modules package-lock.json package.json

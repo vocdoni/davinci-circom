@@ -31,8 +31,8 @@ func TestBallotCipher(t *testing.T) {
 		"encryption_pubkey": []string{pubKey.X.String(), pubKey.Y.String()},
 		"k":                 k.String(),
 		"msg":               msg.String(),
-		"c1":                []string{c1.X.String(), c1.Y.String()},
-		"c2":                []string{c2.X.String(), c2.Y.String()},
+		"c1":                []string{c1[0].String(), c1[1].String()},
+		"c2":                []string{c2[0].String(), c2[1].String()},
 	}
 	bInputs, _ := json.MarshalIndent(inputs, "  ", "  ")
 	t.Log("Inputs:", string(bInputs))
@@ -41,10 +41,10 @@ func TestBallotCipher(t *testing.T) {
 		t.Errorf("Error compiling and generating proof: %v\n", err)
 		return
 	}
-	// read zkey file
+	// read vkey file
 	vkey, err := os.ReadFile(vkeyFile)
 	if err != nil {
-		t.Errorf("Error reading zkey file: %v\n", err)
+		t.Errorf("Error reading vkey file: %v\n", err)
 		return
 	}
 	if err := utils.VerifyProof(proofData, pubSignals, vkey); err != nil {

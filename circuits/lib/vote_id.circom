@@ -12,13 +12,13 @@ template VoteIDChecker() {
     signal input k;           // private
     signal input vote_id;    // public
     // calculate the vote ID using mimc7 hash
-    component hasher = MultiMiMC7(3, 91);
+    component hasher = MultiMiMC7(3, 62);
     hasher.k <== 0;
     hasher.in[0] <== process_id;
     hasher.in[1] <== address;
     hasher.in[2] <== k;
     // bit decomposition of the hash output
-    component bits = Num2Bits(254);
+    component bits = Num2Bits(253);
     bits.in <== hasher.out;
     // reconstruct the lowest 160 bits as the truncated hash
     signal res[161];

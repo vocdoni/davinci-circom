@@ -1,7 +1,7 @@
 pragma circom 2.1.0;
 
 include "bitify.circom";
-include "babyjub.circom";
+include "twisted_edwards.circom";
 include "comparators.circom";
 include "escalarmulany.circom";
 include "escalarmulfix.circom";
@@ -15,7 +15,7 @@ template ElGamal() {
     signal output c2[2]; // second point of the ciphertext
 
     // ensure that public key is on the curve
-    component encryptionPubkeyCheck = BabyCheck();
+    component encryptionPubkeyCheck = PointOnCurve();
     encryptionPubkeyCheck.x <== encryption_pubkey[0];
     encryptionPubkeyCheck.y <== encryption_pubkey[1];
     // ensure that the public key is not the identity point (0, 1)
@@ -25,10 +25,10 @@ template ElGamal() {
     ise.in[0] <== encryption_pubkey[1];
     ise.in[1] <== 1;
     isz.out + ise.out === 0;
-    // babyjubjub base point
+    // BLS12-377 Twisted Edwards base point (from Gnark)
     var base[2] = [
-        5299619240641551281634865583518297030282874472190772894086521144482721001553,
-        16950150798460657717958625567821834550301663161624707787222815936182638968203
+        717051916204163000937139483451426116831771857428389560441264442629694842243,
+        882565546457454111605105352482086902132191855952243170543452705048019814192
     ];
     // encode the message as a point on the curve
     var msg_bits = 32;
@@ -38,7 +38,7 @@ template ElGamal() {
     for (var i=0; i<msg_bits; i++) {
         messageBits.out[i] ==> messagePoint.e[i];
     }
-    var k_bits = 254;
+    var k_bits = 253;
     // c1 = k * base (escalarMulFix)
     component c1Point = EscalarMulFix(k_bits, base);
     component kBits = Num2Bits(k_bits);
@@ -53,8 +53,8 @@ template ElGamal() {
     for (var i=0; i<k_bits; i++) {
         kBits.out[i] ==> sPoint.e[i];
     }
-    // c2 = msg + s (babyAdd)
-    component c2Point = BabyAdd();
+    // c2 = msg + s (PointAdd)
+    component c2Point = PointAdd();
     c2Point.x1 <== messagePoint.out[0];
     c2Point.y1 <== messagePoint.out[1];
     c2Point.x2 <== sPoint.out[0];

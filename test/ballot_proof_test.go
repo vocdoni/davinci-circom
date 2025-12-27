@@ -57,14 +57,40 @@ func TestBallotProof(t *testing.T) {
 		t.Errorf("Error generating random k: %v\n", err)
 		return
 	}
-	cipherfields, _ := utils.CipherBallotFields(fields, n_fields, pubKey, k)
-	bigPID := util.BigToFF(new(big.Int).SetBytes(processID))
-	bigAddr := util.BigToFF(new(big.Int).SetBytes(address))
+
+cipherfields, plainCipherfields := utils.CipherBallotFields(fields, n_fields, pubKey, k)
+	bigPID := new(big.Int).SetBytes(processID)
+	bigAddr := new(big.Int).SetBytes(address)
 	voteID, err := utils.VoteID(bigPID, bigAddr, k)
 	if err != nil {
 		t.Errorf("Error generating vote ID: %v\n", err)
 		return
 	}
+
+	// Calculate inputs hash
+	bigInputs := []*big.Int{
+		bigPID,
+		big.NewInt(int64(numFields)),
+		big.NewInt(int64(forceUniqueness)),
+		big.NewInt(int64(maxValue)),
+		big.NewInt(int64(minValue)),
+		big.NewInt(int64(math.Pow(float64(maxValue-1), float64(costExp))) * int64(numFields)),
+		big.NewInt(int64(numFields)),
+		big.NewInt(int64(costExp)),
+		big.NewInt(int64(costFromWeight)),
+		&pubKey.X,
+		&pubKey.Y,
+		bigAddr,
+		voteID,
+	}
+	bigInputs = append(bigInputs, plainCipherfields...)
+	bigInputs = append(bigInputs, big.NewInt(int64(weight)))
+	inputsHash, err := utils.MiMCHash(bigInputs...)
+	if err != nil {
+		log.Fatalf("Error hashing inputs: %v\n", err)
+		return
+	}
+
 	// circuit inputs
 	inputs := map[string]any{
 		"fields":            utils.BigIntArrayToStringArray(fields, n_fields),
@@ -73,7 +99,7 @@ func TestBallotProof(t *testing.T) {
 		"max_value":         fmt.Sprint(maxValue),
 		"min_value":         fmt.Sprint(minValue),
 		"cost_exponent":     fmt.Sprint(costExp),
-		"max_value_sum":     fmt.Sprint(int(math.Pow(float64(maxValue-1), float64(costExp))) * numFields), // (maxValue-1)^costExp * maxCount
+		"max_value_sum":     fmt.Sprint(int(math.Pow(float64(maxValue-1), float64(costExp))) * numFields),
 		"min_value_sum":     fmt.Sprint(numFields),
 		"cost_from_weight":  fmt.Sprint(costFromWeight),
 		"weight":            fmt.Sprint(weight),
@@ -83,6 +109,7 @@ func TestBallotProof(t *testing.T) {
 		"address":           bigAddr.String(),
 		"process_id":        bigPID.String(),
 		"vote_id":           voteID.String(),
+		"inputs_hash":       inputsHash.String(),
 	}
 	bInputs, _ := json.MarshalIndent(inputs, "  ", "  ")
 	t.Log("Inputs:", string(bInputs))
@@ -93,10 +120,10 @@ func TestBallotProof(t *testing.T) {
 	}
 	t.Log("Proof:", proofData)
 	t.Log("Public signals:", pubSignals)
-	// read zkey file
+	// read vkey file
 	vkey, err := os.ReadFile(vkeyFile)
 	if err != nil {
-		t.Errorf("Error reading zkey file: %v\n", err)
+		t.Errorf("Error reading vkey file: %v\n", err)
 		return
 	}
 	if err := utils.VerifyProof(proofData, pubSignals, vkey); err != nil {

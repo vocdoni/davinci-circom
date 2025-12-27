@@ -3,11 +3,6 @@ package utils
 import (
 	"crypto/rand"
 	"math/big"
-
-	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3-crypto/mimc7"
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"go.vocdoni.io/dvote/util"
 )
 
 func GenerateBallotFields(n, max, min int, unique bool) []*big.Int {
@@ -33,30 +28,32 @@ func GenerateBallotFields(n, max, min int, unique bool) []*big.Int {
 	return fields
 }
 
-func CipherBallotFields(fields []*big.Int, n int, pk *babyjub.PublicKey, k *big.Int) ([][][]string, []*big.Int) {
+func CipherBallotFields(fields []*big.Int, n int, pk *PublicKey, k *big.Int) ([][][]string, []*big.Int) {
 	cipherfields := make([][][]string, n)
 	plainCipherfields := []*big.Int{}
 
-	lastK, err := mimc7.Hash([]*big.Int{k}, nil)
+	lastK, err := MiMCHash(k)
 	if err != nil {
 		panic(err)
 	}
-	for i := range n {
+	for i := 0; i < n; i++ {
 		if i < len(fields) {
 			c1, c2 := Encrypt(fields[i], pk, lastK)
 			cipherfields[i] = [][]string{
-				{c1.X.String(), c1.Y.String()},
-				{c2.X.String(), c2.Y.String()},
+				{c1[0].String(), c1[1].String()},
+				{c2[0].String(), c2[1].String()},
 			}
-			plainCipherfields = append(plainCipherfields, c1.X, c1.Y, c2.X, c2.Y)
+			plainCipherfields = append(plainCipherfields, &c1[0], &c1[1], &c2[0], &c2[1])
 		} else {
 			cipherfields[i] = [][]string{
 				{"0", "0"},
 				{"0", "0"},
 			}
-			plainCipherfields = append(plainCipherfields, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0))
+			zero := big.NewInt(0)
+			plainCipherfields = append(plainCipherfields, zero, zero, zero, zero)
 		}
-		lastK, err = mimc7.Hash([]*big.Int{lastK}, nil)
+		var err error
+		lastK, err = MiMCHash(lastK)
 		if err != nil {
 			panic(err)
 		}
@@ -65,18 +62,18 @@ func CipherBallotFields(fields []*big.Int, n int, pk *babyjub.PublicKey, k *big.
 }
 
 func MockedCommitmentAndNullifier(address, processID, secret []byte) (*big.Int, *big.Int, error) {
-	commitment, err := poseidon.Hash([]*big.Int{
-		util.BigToFF(new(big.Int).SetBytes(address)),
-		util.BigToFF(new(big.Int).SetBytes(processID)),
-		util.BigToFF(new(big.Int).SetBytes(secret)),
-	})
+	commitment, err := MiMCHash(
+		new(big.Int).SetBytes(address),
+		new(big.Int).SetBytes(processID),
+		new(big.Int).SetBytes(secret),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
-	nullifier, err := poseidon.Hash([]*big.Int{
+	nullifier, err := MiMCHash(
 		commitment,
-		util.BigToFF(new(big.Int).SetBytes(secret)),
-	})
+		new(big.Int).SetBytes(secret),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
