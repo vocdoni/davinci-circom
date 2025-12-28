@@ -1,9 +1,0 @@
-    Transition to BLS12-377 curve support
-    
-    - Added BLS12-377 specific primitives (Twisted Edwards, MiMC7 matching Gnark).
-    - Updated circuits to use BLS12-377 parameters and round counts.
-    - Switched Poseidon to MiMC7 for cross-platform compatibility.
-    - Updated Go utility library and tests to use gnark-crypto and local snarkjs.
-    - Verified all tests pass with the new curve.
-
-
