@@ -2,7 +2,7 @@ pragma circom 2.0.0;
 
 include "ballot_checker.circom";
 include "ballot_cipher.circom";
-include "poseidon2.circom";
+include "./lib/bls12377/poseidon377.circom";
 include "bitify.circom";
 
 // VoteIDChecker computes the VoteID from process_id, address, and k.
@@ -13,7 +13,8 @@ template VoteIDChecker() {
     signal input k;
     signal input vote_id;
 
-    component hasher = Poseidon2Hash(3);
+    component hasher = Poseidon377Chunk(3);
+    hasher.domain <== 0;
     hasher.in[0] <== process_id;
     hasher.in[1] <== address;
     hasher.in[2] <== k;
@@ -93,7 +94,8 @@ template BallotProof(n_fields) {
 
     // 4. Verify inputs_hash
     var n_inputs = n_fields + 1 + 2 + n_fields * 4 + 1 + 1 + 1 + 1 + 8;
-    component inputs_hasher = Poseidon2Hash(n_inputs);
+    component inputs_hasher = Poseidon377MultiHash(n_inputs);
+    inputs_hasher.domain <== 0;
     
     var idx = 0;
     for (var i = 0; i < n_fields; i++) {
