@@ -94,6 +94,3 @@ for C in $CIRCUIT; do
   # cp wasm from $ARTIFACTS/$NAME_js/$NAME.wasm to $ARTIFACTS/$NAME.wasm
   cp $ARTIFACTS_DIR/$NAME\_js/$NAME.wasm $ARTIFACTS_DIR/$NAME.wasm
 done
-  
-# clean up
-rm -rf ./node_modules package-lock.json package.json

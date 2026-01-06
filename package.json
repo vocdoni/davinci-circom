@@ -1,0 +1,24 @@
+{
+  "name": "@vocdoni/davinci-circom",
+  "version": "1.0.0",
+  "description": "ZK Circuits and JS Helpers for DAVINCI",
+  "main": "js/dist/index.js",
+  "module": "js/dist/index.js",
+  "types": "js/dist/index.d.ts",
+  "exports": {
+    ".": "./js/dist/index.js"
+  },
+  "files": [
+    "js/dist"
+  ],
+  "scripts": {
+    "prepare": "cd js && npm install && npm run build"
+  },
+  "dependencies": {
+    "@vocdoni/poseidon377js": "github:vocdoni/poseidon377",
+    "circomlib": "^2.0.5",
+    "ffjavascript": "github:p4u/ffjavascript",
+    "snarkjs": "github:p4u/snarkjs",
+    "wasmcurves": "github:p4u/wasmcurves"
+  }
+}
