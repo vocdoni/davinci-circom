@@ -6,8 +6,10 @@ import (
 	"testing"
 )
 
-var persist bool
-var testID string
+var (
+	persist bool
+	testID  string
+)
 
 func TestMain(m *testing.M) {
 	flag.BoolVar(&persist, "persist", false, "persist input files for debugging")

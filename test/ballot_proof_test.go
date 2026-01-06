@@ -18,7 +18,7 @@ func TestBallotProof(t *testing.T) {
 	inputBytes, err := json.MarshalIndent(vectors.InputsMap(), "", "  ")
 	c.Assert(err, qt.IsNil)
 	if persist && testID != "" {
-		_ = os.WriteFile(fmt.Sprintf("../artifacts/%s_input.json", testID), inputBytes, 0644)
+		_ = os.WriteFile(fmt.Sprintf("../artifacts/%s_input.json", testID), inputBytes, 0o644)
 	}
 
 	// Get artifact paths

@@ -54,7 +54,7 @@ func CompileAndGenerateProof(inputs []byte, wasmFile, zkeyFile string) (string, 
 	if err != nil {
 		return "", "", err
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	inputPath := filepath.Join(tempDir, "input.json")
 	if err := os.WriteFile(inputPath, inputs, 0o644); err != nil {
@@ -100,7 +100,7 @@ func VerifyProof(proofData, pubSignals string, vkey []byte) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	proofPath := filepath.Join(tempDir, "proof.json")
 	publicPath := filepath.Join(tempDir, "public.json")
