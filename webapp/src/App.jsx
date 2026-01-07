@@ -80,8 +80,8 @@ function App() {
 
         // Fetch Artifacts in Main Thread to avoid Worker path issues
         addLog("Fetching artifacts...");
-        const wasmUrl = new URL('/ballot_proof.wasm', window.location.origin).toString();
-        const zkeyUrl = new URL('/ballot_proof_pkey.zkey', window.location.origin).toString();
+        const wasmUrl = 'ballot_proof.wasm';
+        const zkeyUrl = 'ballot_proof_pkey.zkey';
 
         const [wasmResp, zkeyResp] = await Promise.all([
             fetch(wasmUrl),

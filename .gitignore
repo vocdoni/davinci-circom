@@ -11,6 +11,11 @@ package-lock.json
 *.tmp
 *.ptau*
 
+# Allow webapp artifacts
+!webapp/public/*.wasm
+!webapp/public/*.zkey
+!webapp/public/*.json
+
 # JS artifacts
 node_modules/
 dist/
