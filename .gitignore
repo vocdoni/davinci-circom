@@ -14,5 +14,4 @@ package-lock.json
 # JS artifacts
 node_modules/
 dist/
-package-lock.json
 .eslintcache

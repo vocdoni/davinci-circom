@@ -1,5 +1,5 @@
 {
-  "name": "davinci-js-helpers",
+  "name": "@vocdoni/davinci-circom",
   "version": "1.0.0",
   "description": "Helper functions for DAVINCI circuit inputs",
   "main": "dist/index.js",
@@ -27,8 +27,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@vocdoni/poseidon377js": "github:vocdoni/poseidon377",
-    "ffjavascript": "github:p4u/ffjavascript",
-    "wasmcurves": "github:p4u/wasmcurves"
+    "@vocdoni/poseidon377js": "https://github.com/vocdoni/poseidon377.git",
+    "ffjavascript": "https://github.com/p4u/ffjavascript.git",
+    "wasmcurves": "https://github.com/p4u/wasmcurves.git"
   }
 }

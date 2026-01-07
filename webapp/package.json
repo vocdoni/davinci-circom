@@ -11,12 +11,12 @@
     "postinstall": "cd node_modules/wasmcurves && npm install --ignore-scripts && npm run build_bls12377"
   },
   "dependencies": {
-    "@vocdoni/poseidon377js": "github:vocdoni/poseidon377",
+    "@vocdoni/poseidon377js": "https://github.com/vocdoni/poseidon377.git",
     "bootstrap": "^5.3.8",
-    "@vocdoni/davinci-circom": "github:vocdoni/davinci-circom",
+    "@vocdoni/davinci-circom": "https://github.com/vocdoni/davinci-circom.git",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "snarkjs": "github:p4u/snarkjs",
+    "snarkjs": "https://github.com/p4u/snarkjs.git",
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "devDependencies": {

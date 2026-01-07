@@ -15,10 +15,9 @@
     "prepare": "cd js && npm install && npm run build"
   },
   "dependencies": {
-    "@vocdoni/poseidon377js": "github:vocdoni/poseidon377",
-    "circomlib": "^2.0.5",
-    "ffjavascript": "github:p4u/ffjavascript",
-    "snarkjs": "github:p4u/snarkjs",
-    "wasmcurves": "github:p4u/wasmcurves"
+    "@vocdoni/poseidon377js": "https://github.com/vocdoni/poseidon377.git",
+    "ffjavascript": "https://github.com/p4u/ffjavascript.git",
+    "wasmcurves": "https://github.com/p4u/wasmcurves.git",
+    "snarkjs": "https://github.com/p4u/snarkjs.git"
   }
 }
