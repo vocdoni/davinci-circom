@@ -16,8 +16,8 @@ import (
 	"github.com/consensys/gnark/test"
 	qt "github.com/frankban/quicktest"
 
-	"github.com/vocdoni/davinci-circom-circuits/circom2gnark"
-	"github.com/vocdoni/davinci-circom-circuits/test/testutils"
+	"github.com/vocdoni/davinci-circom/circom2gnark"
+	"github.com/vocdoni/davinci-circom/test/testutils"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	qt "github.com/frankban/quicktest"
-	"github.com/vocdoni/davinci-circom-circuits/test/testutils"
+	"github.com/vocdoni/davinci-circom/test/testutils"
 )
 
 func TestBallotCipher(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/vocdoni/davinci-circom-circuits
+module github.com/vocdoni/davinci-circom
 
 go 1.25.5
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	qt "github.com/frankban/quicktest"
-	"github.com/vocdoni/davinci-circom-circuits/test/testutils"
+	"github.com/vocdoni/davinci-circom/test/testutils"
 )
 
 // padToEight returns a slice of length 8, copying the caller‑supplied values
