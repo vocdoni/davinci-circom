@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	qt "github.com/frankban/quicktest"
-	"github.com/vocdoni/davinci-circom-circuits/test/testutils"
+	"github.com/vocdoni/davinci-circom/test/testutils"
 )
 
 func TestBallotProof(t *testing.T) {
@@ -18,7 +18,11 @@ func TestBallotProof(t *testing.T) {
 	inputBytes, err := json.MarshalIndent(vectors.InputsMap(), "", "  ")
 	c.Assert(err, qt.IsNil)
 	if persist && testID != "" {
-		_ = os.WriteFile(fmt.Sprintf("../artifacts/%s_input.json", testID), inputBytes, 0o644)
+		if outPath == "" {
+			outPath = "../artifacts"
+		}
+		_ = os.MkdirAll(outPath, 0o755)
+		_ = os.WriteFile(fmt.Sprintf("%s/%s_input.json", outPath, testID), inputBytes, 0o644)
 	}
 
 	// Get artifact paths
@@ -36,6 +40,11 @@ func TestBallotProof(t *testing.T) {
 		zkeyPath,
 	)
 	c.Assert(err, qt.IsNil)
+
+	if persist && testID != "" {
+		_ = os.WriteFile(fmt.Sprintf("%s/%s_proof.json", outPath, testID), []byte(proof), 0o644)
+		_ = os.WriteFile(fmt.Sprintf("%s/%s_public.json", outPath, testID), []byte(publicSignals), 0o644)
+	}
 
 	// Verify proof
 	vkey, err := os.ReadFile(vkeyPath)

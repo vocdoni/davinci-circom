@@ -1,5 +1,6 @@
 artifacts/
 deps/
+testdata/
 node_modules/
 package-lock.json
 *.r1cs
