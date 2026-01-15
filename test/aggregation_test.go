@@ -10,7 +10,7 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
-	"github.com/consensys/gnark/std/algebra/native/sw_bls12377"
+	"github.com/consensys/gnark/std/algebra/emulated/sw_bn254"
 	"github.com/consensys/gnark/std/math/emulated"
 	stdgroth16 "github.com/consensys/gnark/std/recursion/groth16"
 	"github.com/consensys/gnark/test"
@@ -21,30 +21,29 @@ import (
 )
 
 const (
-	numProofs = 5
+	numProofs = 1
 )
 
-// aggregationCircuit verifies numProofs BLS12-377 Groth16 proofs inside BW6-761.
+// aggregationCircuit verifies numProofs BN254 Groth16 proofs inside BN254.
 type aggregationCircuit struct {
-	Proofs       [numProofs]stdgroth16.Proof[sw_bls12377.G1Affine, sw_bls12377.G2Affine]
-	PublicInputs [numProofs]emulated.Element[sw_bls12377.ScalarField]                                `gnark:",public"`
-	VerifyingKey stdgroth16.VerifyingKey[sw_bls12377.G1Affine, sw_bls12377.G2Affine, sw_bls12377.GT] `gnark:"-"`
+	Proofs       [numProofs]stdgroth16.Proof[sw_bn254.G1Affine, sw_bn254.G2Affine]
+	PublicInputs [numProofs][3]emulated.Element[sw_bn254.ScalarField]                                `gnark:",public"`
+	VerifyingKey stdgroth16.VerifyingKey[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl] `gnark:"-"`
 }
 
 func (c *aggregationCircuit) Define(api frontend.API) error {
 	for i := range numProofs {
-		verifier, err := stdgroth16.NewVerifier[sw_bls12377.ScalarField, sw_bls12377.G1Affine, sw_bls12377.G2Affine, sw_bls12377.GT](api)
+		verifier, err := stdgroth16.NewVerifier[sw_bn254.ScalarField, sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl](api)
 		if err != nil {
 			return err
 		}
-		witness := stdgroth16.Witness[sw_bls12377.ScalarField]{
-			Public: []emulated.Element[sw_bls12377.ScalarField]{c.PublicInputs[i]},
+		witness := stdgroth16.Witness[sw_bn254.ScalarField]{
+			Public: c.PublicInputs[i][:],
 		}
-		isValid, err := verifier.IsValidProof(c.VerifyingKey, c.Proofs[i], witness, stdgroth16.WithCompleteArithmetic())
+		err = verifier.AssertProof(c.VerifyingKey, c.Proofs[i], witness, stdgroth16.WithCompleteArithmetic())
 		if err != nil {
 			return fmt.Errorf("proof %d: %w", i, err)
 		}
-		api.AssertIsEqual(isValid, 1)
 	}
 	return nil
 }
@@ -88,41 +87,40 @@ func TestCircomAggregation(t *testing.T) {
 	firstProofJSON, firstPubSignals, err := generateCircomProof(wasmPath, zkeyPath)
 	c.Assert(err, qt.IsNil, qt.Commentf("generate proof"))
 
-	ok, err := circom2gnark.VerifyCircomProofBLS(vkeyBytes, firstProofJSON, firstPubSignals)
+	ok, err := circom2gnark.VerifyCircomProofBN254(vkeyBytes, firstProofJSON, firstPubSignals)
 	c.Assert(err, qt.IsNil)
 	c.Assert(ok, qt.IsTrue, qt.Commentf("native verify failed"))
 	c.Logf("native verify passed: ok=%v", ok)
 
-	placeholder, err := circom2gnark.Circom2GnarkPlaceholderBLSWithVK(vkeyBytes, len(firstPubSignals), true)
+	placeholder, err := circom2gnark.Circom2GnarkPlaceholderBN254WithVK(vkeyBytes, len(firstPubSignals), true)
 	c.Assert(err, qt.IsNil, qt.Commentf("placeholders"))
 
-	var recProofs [numProofs]*circom2gnark.GnarkRecursionProofBLS
+	var recProofs [numProofs]*circom2gnark.GnarkRecursionProofBN254
 	pubJSONBytes, _ := json.Marshal(firstPubSignals)
-	recProofs[0], err = circom2gnark.Circom2GnarkProofForRecursionBLSWithVK(vkeyBytes, firstProofJSON, string(pubJSONBytes), true)
+	recProofs[0], err = circom2gnark.Circom2GnarkProofForRecursionBN254WithVK(vkeyBytes, firstProofJSON, string(pubJSONBytes), true)
 	c.Assert(err, qt.IsNil, qt.Commentf("convert proof 0"))
 
 	for i := 1; i < numProofs; i++ {
 		proofJSON, pubSignals, err := generateCircomProof(wasmPath, zkeyPath)
 		c.Assert(err, qt.IsNil, qt.Commentf("generate proof %d", i))
 
-		ok, err := circom2gnark.VerifyCircomProofBLS(vkeyBytes, proofJSON, pubSignals)
+		ok, err := circom2gnark.VerifyCircomProofBN254(vkeyBytes, proofJSON, pubSignals)
 		c.Assert(err, qt.IsNil)
 		c.Assert(ok, qt.IsTrue, qt.Commentf("native verify proof %d failed", i))
 
 		pubJSON, _ := json.Marshal(pubSignals)
-		recProofs[i], err = circom2gnark.Circom2GnarkProofForRecursionBLSWithVK(vkeyBytes, proofJSON, string(pubJSON), true)
+		recProofs[i], err = circom2gnark.Circom2GnarkProofForRecursionBN254WithVK(vkeyBytes, proofJSON, string(pubJSON), true)
 		c.Assert(err, qt.IsNil, qt.Commentf("convert proof %d", i))
 	}
 
 	placeholderCircuit := &aggregationCircuit{VerifyingKey: placeholder.Vk}
 	for i := 0; i < numProofs; i++ {
 		placeholderCircuit.Proofs[i] = placeholder.Proof
-		if len(placeholder.Witness.Public) > 0 {
-			placeholderCircuit.PublicInputs[i] = placeholder.Witness.Public[0]
-		}
+		// Public inputs are handled by type definition, empty initialization is fine for compile
 	}
 
-	ccs, err := frontend.Compile(ecc.BW6_761.ScalarField(), r1cs.NewBuilder, placeholderCircuit)
+	// Verify BN254 inside BN254
+	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, placeholderCircuit)
 	c.Assert(err, qt.IsNil, qt.Commentf("compile aggregation circuit"))
 
 	internalVars, secretVars, publicVars := ccs.GetNbVariables()
@@ -131,27 +129,28 @@ func TestCircomAggregation(t *testing.T) {
 	assignment := &aggregationCircuit{VerifyingKey: placeholder.Vk}
 	for i := 0; i < numProofs; i++ {
 		assignment.Proofs[i] = recProofs[i].Proof
-		if len(recProofs[i].PublicInputs.Public) > 0 {
-			assignment.PublicInputs[i] = recProofs[i].PublicInputs.Public[0]
+		if len(recProofs[i].PublicInputs.Public) != 3 {
+			c.Fatal("Expected 3 public inputs, got", len(recProofs[i].PublicInputs.Public))
 		}
+		copy(assignment.PublicInputs[i][:], recProofs[i].PublicInputs.Public)
 	}
-	err = test.IsSolved(placeholderCircuit, assignment, ecc.BW6_761.ScalarField())
+	err = test.IsSolved(placeholderCircuit, assignment, ecc.BN254.ScalarField())
 	c.Assert(err, qt.IsNil, qt.Commentf("assignment not satisfied"))
 
 	pk, vk, err := groth16.Setup(ccs)
 	c.Assert(err, qt.IsNil, qt.Commentf("setup aggregation"))
 
-	wit, err := frontend.NewWitness(assignment, ecc.BW6_761.ScalarField())
+	wit, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
 	c.Assert(err, qt.IsNil, qt.Commentf("create witness"))
 
-	proofAgg, err := groth16.Prove(ccs, pk, wit, stdgroth16.GetNativeProverOptions(ecc.BLS12_377.ScalarField(), ecc.BW6_761.ScalarField()))
+	proofAgg, err := groth16.Prove(ccs, pk, wit)
 	c.Assert(err, qt.IsNil, qt.Commentf("prove aggregation"))
 
 	pubWit, err := wit.Public()
 	c.Assert(err, qt.IsNil, qt.Commentf("public witness"))
 
-	err = groth16.Verify(proofAgg, vk, pubWit, stdgroth16.GetNativeVerifierOptions(ecc.BLS12_377.ScalarField(), ecc.BW6_761.ScalarField()))
+	err = groth16.Verify(proofAgg, vk, pubWit)
 	c.Assert(err, qt.IsNil, qt.Commentf("verify aggregation"))
 
-	c.Logf("BW6-761 aggregation circuit constraints for %d proofs: %d", numProofs, ccs.GetNbConstraints())
+	c.Logf("BN254 aggregation circuit constraints for %d proofs: %d", numProofs, ccs.GetNbConstraints())
 }

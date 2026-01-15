@@ -4,19 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "postinstall": "cd node_modules/wasmcurves && npm install --ignore-scripts && npm run build_bls12377"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@vocdoni/poseidon377js": "https://github.com/vocdoni/poseidon377.git",
     "bootstrap": "^5.3.8",
-    "@vocdoni/davinci-circom": "https://github.com/vocdoni/davinci-circom.git",
+    "@vocdoni/davinci-circom": "file:../js",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "snarkjs": "https://github.com/p4u/snarkjs.git",
+    "snarkjs": "^0.7.5",
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "devDependencies": {

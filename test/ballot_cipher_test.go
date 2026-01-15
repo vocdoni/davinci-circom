@@ -21,18 +21,17 @@ func TestBallotCipher(t *testing.T) {
 	c.Assert(err, qt.IsNil)
 
 	// encrypt ballot
-	_, pubKey := testutils.GenerateKeyPair()
-	pubX, pubY := testutils.AffineCoords(pubKey)
+	_, pubX, pubY := testutils.GenerateKeyPair()
+	
 	k, err := testutils.RandomK()
 	c.Assert(err, qt.IsNil, qt.Commentf("Error generating random k"))
 
 	// Circuit derives k_i = Poseidon(k_{i-1}) per field; we only have one field.
-	domain := testutils.ToFr(0)
-	ks, err := testutils.DerivePoseidonChain(domain, k, 1)
+	ks, err := testutils.DerivePoseidonChain(k, 1)
 	c.Assert(err, qt.IsNil, qt.Commentf("derive ks"))
 
 	msg := big.NewInt(3)
-	c1, c2 := testutils.Encrypt(msg, pubKey, ks[1])
+	c1, c2 := testutils.Encrypt(msg, pubX, pubY, ks[1])
 	inputs := map[string]any{
 		"encryption_pubkey": []string{pubX.String(), pubY.String()},
 		"k":                 k.String(),
