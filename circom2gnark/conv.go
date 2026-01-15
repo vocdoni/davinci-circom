@@ -3,14 +3,14 @@ package circom2gnark
 import (
 	"fmt"
 
-	bls12377 "github.com/consensys/gnark-crypto/ecc/bls12-377"
-	bls12377fr "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-	groth16_bls12377 "github.com/consensys/gnark/backend/groth16/bls12-377"
+	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
+	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	groth16_bn254 "github.com/consensys/gnark/backend/groth16/bn254"
 )
 
-// ConvertPublicInputsBLS parses public inputs into BLS12-377 field elements.
-func ConvertPublicInputsBLS(publicSignals []string) ([]bls12377fr.Element, error) {
-	publicInputs := make([]bls12377fr.Element, len(publicSignals))
+// ConvertPublicInputsBN254 parses public inputs into BN254 field elements.
+func ConvertPublicInputsBN254(publicSignals []string) ([]bn254fr.Element, error) {
+	publicInputs := make([]bn254fr.Element, len(publicSignals))
 	for i, s := range publicSignals {
 		bi, err := stringToBigInt(s)
 		if err != nil {
@@ -21,57 +21,57 @@ func ConvertPublicInputsBLS(publicSignals []string) ([]bls12377fr.Element, error
 	return publicInputs, nil
 }
 
-// ToGnarkBLS converts a CircomProof into a Gnark-compatible Proof structure over BLS12-377.
-func (circomProof *CircomProof) ToGnarkBLS() (*groth16_bls12377.Proof, error) {
-	arG1, err := stringToG1BLS(circomProof.PiA)
+// ToGnarkBN254 converts a CircomProof into a Gnark-compatible Proof structure over BN254.
+func (circomProof *CircomProof) ToGnarkBN254() (*groth16_bn254.Proof, error) {
+	arG1, err := stringToG1BN254(circomProof.PiA)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert PiA: %v", err)
 	}
-	krsG1, err := stringToG1BLS(circomProof.PiC)
+	krsG1, err := stringToG1BN254(circomProof.PiC)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert PiC: %v", err)
 	}
-	bsG2, err := stringToG2BLS(circomProof.PiB)
+	bsG2, err := stringToG2BN254(circomProof.PiB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert PiB: %v", err)
 	}
-	return &groth16_bls12377.Proof{
+	return &groth16_bn254.Proof{
 		Ar:  *arG1,
 		Krs: *krsG1,
 		Bs:  *bsG2,
 	}, nil
 }
 
-// ToGnarkBLS converts a CircomVerificationKey into a Gnark-compatible verification key over BLS12-377.
-func (circomVerificationKey *CircomVerificationKey) ToGnarkBLS() (*groth16_bls12377.VerifyingKey, error) {
-	alphaG1, err := stringToG1BLS(circomVerificationKey.VkAlpha1)
+// ToGnarkBN254 converts a CircomVerificationKey into a Gnark-compatible verification key over BN254.
+func (circomVerificationKey *CircomVerificationKey) ToGnarkBN254() (*groth16_bn254.VerifyingKey, error) {
+	alphaG1, err := stringToG1BN254(circomVerificationKey.VkAlpha1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VkAlpha1: %v", err)
 	}
-	betaG2, err := stringToG2BLS(circomVerificationKey.VkBeta2)
+	betaG2, err := stringToG2BN254(circomVerificationKey.VkBeta2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VkBeta2: %v", err)
 	}
-	gammaG2, err := stringToG2BLS(circomVerificationKey.VkGamma2)
+	gammaG2, err := stringToG2BN254(circomVerificationKey.VkGamma2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VkGamma2: %v", err)
 	}
-	deltaG2, err := stringToG2BLS(circomVerificationKey.VkDelta2)
+	deltaG2, err := stringToG2BN254(circomVerificationKey.VkDelta2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert VkDelta2: %v", err)
 	}
 
 	numIC := len(circomVerificationKey.IC)
-	G1K := make([]bls12377.G1Affine, numIC)
+	G1K := make([]bn254.G1Affine, numIC)
 	for i, icPoint := range circomVerificationKey.IC {
-		icG1, err := stringToG1BLS(icPoint)
+		icG1, err := stringToG1BN254(icPoint)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert IC[%d]: %v", i, err)
 		}
 		G1K[i] = *icG1
 	}
 
-	vk := &groth16_bls12377.VerifyingKey{}
+	vk := &groth16_bn254.VerifyingKey{}
 	vk.G1.Alpha = *alphaG1
 	vk.G1.K = G1K
 	vk.G2.Beta = *betaG2
@@ -84,9 +84,9 @@ func (circomVerificationKey *CircomVerificationKey) ToGnarkBLS() (*groth16_bls12
 	return vk, nil
 }
 
-// Verify verifies the Gnark proof using the provided verification key and public inputs over BLS12-377.
-func (proof *GnarkProofBLS) Verify() (bool, error) {
-	err := groth16_bls12377.Verify(proof.Proof, proof.VerifyingKey, proof.PublicInputs)
+// Verify verifies the Gnark proof using the provided verification key and public inputs over BN254.
+func (proof *GnarkProofBN254) Verify() (bool, error) {
+	err := groth16_bn254.Verify(proof.Proof, proof.VerifyingKey, proof.PublicInputs)
 	if err != nil {
 		return false, fmt.Errorf("proof verification failed: %v", err)
 	}

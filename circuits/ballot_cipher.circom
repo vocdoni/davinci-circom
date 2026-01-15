@@ -1,7 +1,7 @@
 pragma circom 2.1.0;
 
-include "comparators.circom";
-include "./lib/bls12377/poseidon377.circom";
+include "circomlib/circuits/comparators.circom";
+include "circomlib/circuits/poseidon.circom";
 include "./lib/elgamal.circom";
 
 template FieldComparator() {
@@ -42,14 +42,13 @@ template BallotCipher(n_fields) {
     signal sum[n_fields + 1];
     sum[0] <== 0;
     // calculate the different k's derived from the provided one using recursive
-    // poseidon377 hashing
+    // poseidon hashing
     signal ks[n_fields + 1];
     ks[0] <== k;
     component k_hasher[n_fields];
     for (var i = 0; i < n_fields; i++) {
-        k_hasher[i] = Poseidon377Chunk(1);
-        k_hasher[i].domain <== 0; // Using 0 as domain separator
-        k_hasher[i].in[0] <== ks[i];
+        k_hasher[i] = Poseidon(1);
+        k_hasher[i].inputs[0] <== ks[i];
         ks[i+1] <== k_hasher[i].out;
     }
     // encrypt the fields using ElGamal and compare the results with the 

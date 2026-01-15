@@ -7,44 +7,44 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	recursion "github.com/consensys/gnark/std/recursion/groth16"
 
-	groth16_bls12377 "github.com/consensys/gnark/backend/groth16/bls12-377"
-	"github.com/consensys/gnark/std/algebra/native/sw_bls12377"
+	groth16_bn254 "github.com/consensys/gnark/backend/groth16/bn254"
+	"github.com/consensys/gnark/std/algebra/emulated/sw_bn254"
 )
 
-// ToGnarkRecursionBLS converts a Circom proof (BLS12-377) to the Gnark recursion proof format.
-func (circomProof *CircomProof) ToGnarkRecursionBLS(circomVk *CircomVerificationKey,
+// ToGnarkRecursionBN254 converts a Circom proof (BN254) to the Gnark recursion proof format.
+func (circomProof *CircomProof) ToGnarkRecursionBN254(circomVk *CircomVerificationKey,
 	circomPublicSignals []string, fixedVk bool,
-) (*GnarkRecursionProofBLS, error) {
-	publicInputs, err := ConvertPublicInputsBLS(circomPublicSignals)
+) (*GnarkRecursionProofBN254, error) {
+	publicInputs, err := ConvertPublicInputsBN254(circomPublicSignals)
 	if err != nil {
 		return nil, err
 	}
-	gnarkProof, err := circomProof.ToGnarkBLS()
+	gnarkProof, err := circomProof.ToGnarkBN254()
 	if err != nil {
 		return nil, err
 	}
-	recursionProof, err := recursion.ValueOfProof[sw_bls12377.G1Affine, sw_bls12377.G2Affine](gnarkProof)
+	recursionProof, err := recursion.ValueOfProof[sw_bn254.G1Affine, sw_bn254.G2Affine](gnarkProof)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert proof to recursion proof: %w", err)
 	}
 
-	gnarkVk, err := circomVk.ToGnarkBLS()
+	gnarkVk, err := circomVk.ToGnarkBN254()
 	if err != nil {
 		return nil, err
 	}
-	publicInputElementsEmulated := make([]emulated.Element[sw_bls12377.ScalarField], len(publicInputs))
+	publicInputElementsEmulated := make([]emulated.Element[sw_bn254.ScalarField], len(publicInputs))
 	for i, input := range publicInputs {
 		bigIntValue := input.BigInt(new(big.Int))
-		publicInputElementsEmulated[i] = emulated.ValueOf[sw_bls12377.ScalarField](bigIntValue)
+		publicInputElementsEmulated[i] = emulated.ValueOf[sw_bn254.ScalarField](bigIntValue)
 	}
-	assignments := &GnarkRecursionProofBLS{
+	assignments := &GnarkRecursionProofBN254{
 		Proof: recursionProof,
-		PublicInputs: recursion.Witness[sw_bls12377.ScalarField]{
+		PublicInputs: recursion.Witness[sw_bn254.ScalarField]{
 			Public: publicInputElementsEmulated,
 		},
 	}
 	if !fixedVk {
-		recursionVk, err := recursion.ValueOfVerifyingKey[sw_bls12377.G1Affine, sw_bls12377.G2Affine, sw_bls12377.GT](gnarkVk)
+		recursionVk, err := recursion.ValueOfVerifyingKey[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl](gnarkVk)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert verification key to recursion verification key: %w", err)
 		}
@@ -53,69 +53,69 @@ func (circomProof *CircomProof) ToGnarkRecursionBLS(circomVk *CircomVerification
 	return assignments, nil
 }
 
-// PlaceholdersForRecursionBLS creates placeholders for BLS12-377 recursion circuits.
-func PlaceholdersForRecursionBLS(circomVk *CircomVerificationKey,
+// PlaceholdersForRecursionBN254 creates placeholders for BN254 recursion circuits.
+func PlaceholdersForRecursionBN254(circomVk *CircomVerificationKey,
 	nPublicInputs int, fixedVk bool,
-) (*GnarkRecursionPlaceholdersBLS, error) {
-	gnarkVk, err := circomVk.ToGnarkBLS()
+) (*GnarkRecursionPlaceholdersBN254, error) {
+	gnarkVk, err := circomVk.ToGnarkBN254()
 	if err != nil {
 		return nil, err
 	}
-	return createPlaceholdersForRecursionBLS(gnarkVk, nPublicInputs, fixedVk)
+	return createPlaceholdersForRecursionBN254(gnarkVk, nPublicInputs, fixedVk)
 }
 
-func createPlaceholdersForRecursionBLS(gnarkVk *groth16_bls12377.VerifyingKey,
+func createPlaceholdersForRecursionBN254(gnarkVk *groth16_bn254.VerifyingKey,
 	nPublicInputs int, fixedVk bool,
-) (*GnarkRecursionPlaceholdersBLS, error) {
+) (*GnarkRecursionPlaceholdersBN254, error) {
 	if gnarkVk == nil || nPublicInputs < 0 {
 		return nil, fmt.Errorf("invalid inputs to create placeholders for recursion")
 	}
-	placeholderVk, err := recursion.ValueOfVerifyingKeyFixed[sw_bls12377.G1Affine, sw_bls12377.G2Affine, sw_bls12377.GT](gnarkVk)
+	placeholderVk, err := recursion.ValueOfVerifyingKeyFixed[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl](gnarkVk)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert verification key to recursion verification key: %w", err)
 	}
-	placeholderWitness := recursion.Witness[sw_bls12377.ScalarField]{
-		Public: make([]emulated.Element[sw_bls12377.ScalarField], nPublicInputs),
+	placeholderWitness := recursion.Witness[sw_bn254.ScalarField]{
+		Public: make([]emulated.Element[sw_bn254.ScalarField], nPublicInputs),
 	}
-	placeholderProof := recursion.Proof[sw_bls12377.G1Affine, sw_bls12377.G2Affine]{}
+	placeholderProof := recursion.Proof[sw_bn254.G1Affine, sw_bn254.G2Affine]{}
 
-	placeholders := &GnarkRecursionPlaceholdersBLS{
+	placeholders := &GnarkRecursionPlaceholdersBN254{
 		Vk:      placeholderVk,
 		Witness: placeholderWitness,
 		Proof:   placeholderProof,
 	}
 	if !fixedVk {
-		placeholders.Vk.G1.K = make([]sw_bls12377.G1Affine, len(placeholders.Vk.G1.K))
+		placeholders.Vk.G1.K = make([]sw_bn254.G1Affine, len(placeholders.Vk.G1.K))
 	}
 	return placeholders, nil
 }
 
-// ToGnarkProofBLS converts to non-recursive Gnark proof over BLS12-377.
-func (circomProof *CircomProof) ToGnarkProofBLS(circomVk *CircomVerificationKey,
+// ToGnarkProofBN254 converts to non-recursive Gnark proof over BN254.
+func (circomProof *CircomProof) ToGnarkProofBN254(circomVk *CircomVerificationKey,
 	circomPublicSignals []string,
-) (*GnarkProofBLS, error) {
-	publicInputs, err := ConvertPublicInputsBLS(circomPublicSignals)
+) (*GnarkProofBN254, error) {
+	publicInputs, err := ConvertPublicInputsBN254(circomPublicSignals)
 	if err != nil {
 		return nil, err
 	}
-	proof, err := circomProof.ToGnarkBLS()
+	proof, err := circomProof.ToGnarkBN254()
 	if err != nil {
 		return nil, err
 	}
-	vk, err := circomVk.ToGnarkBLS()
+	vk, err := circomVk.ToGnarkBN254()
 	if err != nil {
 		return nil, err
 	}
-	return &GnarkProofBLS{
+	return &GnarkProofBN254{
 		Proof:        proof,
 		VerifyingKey: vk,
 		PublicInputs: publicInputs,
 	}, nil
 }
 
-// ToGnarkRecursionProofBLS is a helper to convert to recursion proof with fixed vk.
-func (circomProof *CircomProof) ToGnarkRecursionProofBLS(circomVk *CircomVerificationKey,
+// ToGnarkRecursionProofBN254 is a helper to convert to recursion proof with fixed vk.
+func (circomProof *CircomProof) ToGnarkRecursionProofBN254(circomVk *CircomVerificationKey,
 	circomPublicSignals []string,
-) (*GnarkRecursionProofBLS, error) {
-	return circomProof.ToGnarkRecursionBLS(circomVk, circomPublicSignals, true)
+) (*GnarkRecursionProofBN254, error) {
+	return circomProof.ToGnarkRecursionBN254(circomVk, circomPublicSignals, true)
 }

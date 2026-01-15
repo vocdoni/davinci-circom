@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strings"
 
-	bls12377 "github.com/consensys/gnark-crypto/ecc/bls12-377"
+	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
 )
 
 // stringToBigInt converts a decimal or hex string to a big.Int.
@@ -51,12 +51,12 @@ func stringToBytesWithSize(s string, size int) ([]byte, error) {
 	return b, nil
 }
 
-// stringToG1BLS converts coordinates into a BLS12-377 G1 point.
-func stringToG1BLS(h []string) (*bls12377.G1Affine, error) {
+// stringToG1BN254 converts coordinates into a BN254 G1 point.
+func stringToG1BN254(h []string) (*bn254.G1Affine, error) {
 	if len(h) < 2 {
-		return nil, fmt.Errorf("not enough data for stringToG1BLS")
+		return nil, fmt.Errorf("not enough data for stringToG1BN254")
 	}
-	const coordBytes = 48
+	const coordBytes = 32
 	hexa := len(h[0]) > 1 && strings.HasPrefix(h[0], "0x")
 	var b []byte
 	if hexa {
@@ -76,19 +76,19 @@ func stringToG1BLS(h []string) (*bls12377.G1Affine, error) {
 			b = append(b, dec...)
 		}
 	}
-	p := new(bls12377.G1Affine)
+	p := new(bn254.G1Affine)
 	if err := p.Unmarshal(b); err != nil {
 		return nil, err
 	}
 	return p, nil
 }
 
-// stringToG2BLS converts coordinates into a BLS12-377 G2 point.
-func stringToG2BLS(h [][]string) (*bls12377.G2Affine, error) {
+// stringToG2BN254 converts coordinates into a BN254 G2 point.
+func stringToG2BN254(h [][]string) (*bn254.G2Affine, error) {
 	if len(h) < 2 {
-		return nil, fmt.Errorf("not enough data for stringToG2BLS")
+		return nil, fmt.Errorf("not enough data for stringToG2BN254")
 	}
-	const coordBytes = 48
+	const coordBytes = 32
 	hexa := len(h[0][0]) > 1 && strings.HasPrefix(h[0][0], "0x")
 	var b []byte
 	if hexa {
@@ -111,7 +111,7 @@ func stringToG2BLS(h [][]string) (*bls12377.G2Affine, error) {
 			b = append(b, dec...)
 		}
 	}
-	p := new(bls12377.G2Affine)
+	p := new(bn254.G2Affine)
 	if err := p.Unmarshal(b); err != nil {
 		return nil, err
 	}

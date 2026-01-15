@@ -1,5 +1,7 @@
 pragma circom 2.1.0;
 
+include "circomlib/circuits/bitify.circom";
+
 template Pow(n) {
     signal input base;
     signal input exp_bits[n];

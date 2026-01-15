@@ -16,36 +16,28 @@ type ProofData struct {
 }
 
 func getSnarkJSPath() (string, error) {
-	// Check local deps/snarkjs/cli.js (standard setup via prepare-circuit.sh)
-	path, err := filepath.Abs("../deps/snarkjs/cli.js")
+	// Look for locally installed snarkjs in node_modules
+	path, err := filepath.Abs("../node_modules/snarkjs/build/cli.cjs")
 	if err == nil {
 		if _, err := os.Stat(path); err == nil {
 			return path, nil
 		}
 	}
-	// If running from nested test folders, look two levels up.
-	path, err = filepath.Abs("../../deps/snarkjs/cli.js")
+    // Try current dir
+	path, err = filepath.Abs("node_modules/snarkjs/build/cli.cjs")
 	if err == nil {
 		if _, err := os.Stat(path); err == nil {
 			return path, nil
 		}
 	}
-	// Fallback to dev environment (../cli.js relative to davinci-circom-circuits root)
-	path, err = filepath.Abs("../cli.js")
-	if err == nil {
-		if _, err := os.Stat(path); err == nil {
-			return path, nil
-		}
-	}
-	// Fallback inside utils (if tests run from root)
-	path, err = filepath.Abs("deps/snarkjs/cli.js")
-	if err == nil {
-		if _, err := os.Stat(path); err == nil {
-			return path, nil
-		}
-	}
+    
+    // Try global/path executable
+    path, err = exec.LookPath("snarkjs")
+    if err == nil {
+        return path, nil
+    }
 
-	return "", fmt.Errorf("snarkjs cli.js not found in deps/snarkjs/cli.js or ../cli.js")
+	return "", fmt.Errorf("snarkjs not found")
 }
 
 func CompileAndGenerateProof(inputs []byte, wasmFile, zkeyFile string) (string, string, error) {
@@ -71,13 +63,26 @@ func CompileAndGenerateProof(inputs []byte, wasmFile, zkeyFile string) (string, 
 		return "", "", err
 	}
 
-	cmdWtns := exec.Command("node", snarkjsPath, "wtns", "calculate", wasmFile, inputPath, witnessPath)
+    // Determine how to call snarkjs (node script or binary)
+    var cmdWtns *exec.Cmd
+    if filepath.Ext(snarkjsPath) == ".cjs" || filepath.Ext(snarkjsPath) == ".js" {
+        cmdWtns = exec.Command("node", snarkjsPath, "wtns", "calculate", wasmFile, inputPath, witnessPath)
+    } else {
+        cmdWtns = exec.Command(snarkjsPath, "wtns", "calculate", wasmFile, inputPath, witnessPath)
+    }
+
 	if out, err := cmdWtns.CombinedOutput(); err != nil {
 		return "", "", fmt.Errorf("snarkjs wtns calculate failed: %v\nOutput: %s", err, out)
 	}
 
 	// Generate proof
-	cmdProve := exec.Command("node", snarkjsPath, "groth16", "prove", zkeyFile, witnessPath, proofPath, publicPath)
+    var cmdProve *exec.Cmd
+    if filepath.Ext(snarkjsPath) == ".cjs" || filepath.Ext(snarkjsPath) == ".js" {
+        cmdProve = exec.Command("node", snarkjsPath, "groth16", "prove", zkeyFile, witnessPath, proofPath, publicPath)
+    } else {
+        cmdProve = exec.Command(snarkjsPath, "groth16", "prove", zkeyFile, witnessPath, proofPath, publicPath)
+    }
+
 	if out, err := cmdProve.CombinedOutput(); err != nil {
 		return "", "", fmt.Errorf("snarkjs groth16 prove failed: %v\nOutput: %s", err, out)
 	}
@@ -121,7 +126,13 @@ func VerifyProof(proofData, pubSignals string, vkey []byte) error {
 		return err
 	}
 
-	cmdVerify := exec.Command("node", snarkjsPath, "groth16", "verify", vkeyPath, publicPath, proofPath)
+    var cmdVerify *exec.Cmd
+    if filepath.Ext(snarkjsPath) == ".cjs" || filepath.Ext(snarkjsPath) == ".js" {
+        cmdVerify = exec.Command("node", snarkjsPath, "groth16", "verify", vkeyPath, publicPath, proofPath)
+    } else {
+        cmdVerify = exec.Command(snarkjsPath, "groth16", "verify", vkeyPath, publicPath, proofPath)
+    }
+
 	if out, err := cmdVerify.CombinedOutput(); err != nil {
 		return fmt.Errorf("snarkjs groth16 verify failed: %v\nOutput: %s", err, out)
 	}

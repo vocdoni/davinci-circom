@@ -4,11 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"math/big"
-
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-	"github.com/vocdoni/davinci-node/crypto/ecc/bls12377te"
-	"github.com/vocdoni/davinci-node/crypto/ecc/curves"
-	"github.com/vocdoni/poseidon377"
 )
 
 // BallotVectors holds a reproducible set of inputs for the ballot circuits.
@@ -22,7 +17,7 @@ type BallotVectors struct {
 	Address        *big.Int
 	K              *big.Int
 	VoteID         *big.Int
-	InputsHash     fr.Element
+	InputsHash     *big.Int
 	NumFields      int
 	UniqueValues   int
 	MaxValue       int
@@ -57,23 +52,23 @@ func BuildBallotVectors() (*BallotVectors, error) {
 	}
 	weight := 1
 
-	_, pub := GenerateKeyPair()
-	pubX, pubY := AffineCoords(pub)
+	// Updated to use the new GenerateKeyPair that returns (priv, x, y)
+	_, pubX, pubY := GenerateKeyPair()
 
 	k, err := RandomK()
 	if err != nil {
 		return nil, err
 	}
 
-	var domain fr.Element
-	ks, err := DerivePoseidonChain(domain, k, nFields)
+	ks, err := DerivePoseidonChain(k, nFields)
 	if err != nil {
 		return nil, err
 	}
 
 	cipherfields := make([][2][2]*big.Int, nFields)
 	for i := 0; i < nFields; i++ {
-		c1, c2 := Encrypt(big.NewInt(int64(fields[i])), pub, ks[i+1])
+		// Updated Encrypt call signature: Encrypt(msg, pubX, pubY, k)
+		c1, c2 := Encrypt(big.NewInt(int64(fields[i])), pubX, pubY, ks[i+1])
 		cipherfields[i] = [2][2]*big.Int{
 			{new(big.Int).Set(&c1[0]), new(big.Int).Set(&c1[1])},
 			{new(big.Int).Set(&c2[0]), new(big.Int).Set(&c2[1])},
@@ -83,39 +78,38 @@ func BuildBallotVectors() (*BallotVectors, error) {
 	processID := new(big.Int).SetBytes(randomBytes(20))
 	address := new(big.Int).SetBytes(randomBytes(20))
 
-	voteIDRes, err := poseidon377.Hash(domain, ToFr(processID), ToFr(address), ToFr(k))
+	// voteID uses priv K directly
+	voteID, err := VoteID(processID, address, k)
 	if err != nil {
 		return nil, err
 	}
-	voteID := TruncateTo160Bits(voteIDRes.BigInt(new(big.Int)))
 
-	var inputsList []fr.Element
+	var inputsList []*big.Int
+	inputsList = append(inputsList, processID)
+	inputsList = append(inputsList, big.NewInt(int64(numFields)))
+	inputsList = append(inputsList, big.NewInt(int64(uniqueValues)))
+	inputsList = append(inputsList, big.NewInt(int64(maxValue)))
+	inputsList = append(inputsList, big.NewInt(int64(minValue)))
+	inputsList = append(inputsList, big.NewInt(int64(maxValueSum)))
+	inputsList = append(inputsList, big.NewInt(int64(minValueSum)))
+	inputsList = append(inputsList, big.NewInt(int64(costExponent)))
+	inputsList = append(inputsList, big.NewInt(int64(costFromWeight)))
+	
+	inputsList = append(inputsList, pubX)
+	inputsList = append(inputsList, pubY)
+	
+	inputsList = append(inputsList, address)
+	inputsList = append(inputsList, voteID)
+	
 	for i := 0; i < nFields; i++ {
-		inputsList = append(inputsList, ToFr(fields[i]))
+		inputsList = append(inputsList, cipherfields[i][0][0])
+		inputsList = append(inputsList, cipherfields[i][0][1])
+		inputsList = append(inputsList, cipherfields[i][1][0])
+		inputsList = append(inputsList, cipherfields[i][1][1])
 	}
-	inputsList = append(inputsList, ToFr(weight))
-	inputsList = append(inputsList, ToFr(pubX))
-	inputsList = append(inputsList, ToFr(pubY))
-	for i := 0; i < nFields; i++ {
-		inputsList = append(inputsList, ToFr(cipherfields[i][0][0]))
-		inputsList = append(inputsList, ToFr(cipherfields[i][0][1]))
-		inputsList = append(inputsList, ToFr(cipherfields[i][1][0]))
-		inputsList = append(inputsList, ToFr(cipherfields[i][1][1]))
-	}
-	inputsList = append(inputsList, ToFr(processID))
-	inputsList = append(inputsList, ToFr(address))
-	inputsList = append(inputsList, ToFr(k))
-	inputsList = append(inputsList, ToFr(voteID))
-	inputsList = append(inputsList, ToFr(numFields))
-	inputsList = append(inputsList, ToFr(uniqueValues))
-	inputsList = append(inputsList, ToFr(maxValue))
-	inputsList = append(inputsList, ToFr(minValue))
-	inputsList = append(inputsList, ToFr(maxValueSum))
-	inputsList = append(inputsList, ToFr(minValueSum))
-	inputsList = append(inputsList, ToFr(costExponent))
-	inputsList = append(inputsList, ToFr(costFromWeight))
+	inputsList = append(inputsList, big.NewInt(int64(weight)))
 
-	inputsHash, err := poseidon377.MultiHash(domain, inputsList...)
+	inputsHash, err := MultiHash(inputsList)
 	if err != nil {
 		return nil, err
 	}
@@ -181,9 +175,4 @@ func StringifyCipherfields(cf [][2][2]*big.Int) [][2][2]string {
 		}
 	}
 	return out
-}
-
-// NewBLS12377Curve returns a fresh BLS12-377 Edwards point implementation.
-func NewBLS12377Curve() *bls12377te.Point {
-	return curves.New(bls12377te.CurveType).(*bls12377te.Point)
 }

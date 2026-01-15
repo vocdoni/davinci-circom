@@ -6,12 +6,11 @@ self.onmessage = async (e) => {
 
     if (type === 'generateProof') {
         try {
-            postMessage({ type: 'log', msg: `Initializing Worker (SingleThread: ${singleThread})...` });
+            postMessage({ type: 'log', msg: `Initializing Worker...` });
             
             const buildStart = performance.now();
-            // Force singleThread if requested (passed to buildBls12377)
-            const builder = await BallotBuilder.build(singleThread);
-            postMessage({ type: 'log', msg: `BallotBuilder & BLS12-377 initialized in ${(performance.now() - buildStart).toFixed(2)}ms` });
+            const builder = await BallotBuilder.build();
+            postMessage({ type: 'log', msg: `BallotBuilder & BN254 initialized in ${(performance.now() - buildStart).toFixed(2)}ms` });
 
             const { fieldsArr, weight, processId, address, k, config } = args;
 

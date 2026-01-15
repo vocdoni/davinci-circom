@@ -1,5 +1,7 @@
 pragma circom 2.1.0;
 
+include "circomlib/circuits/comparators.circom";
+
 template Mux() {
     signal input a;
     signal input b;

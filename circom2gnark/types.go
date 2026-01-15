@@ -1,9 +1,9 @@
 package circom2gnark
 
 import (
-	bls12377fr "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-	groth16_bls12377 "github.com/consensys/gnark/backend/groth16/bls12-377"
-	"github.com/consensys/gnark/std/algebra/native/sw_bls12377"
+	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	groth16_bn254 "github.com/consensys/gnark/backend/groth16/bn254"
+	"github.com/consensys/gnark/std/algebra/emulated/sw_bn254"
 	recursion "github.com/consensys/gnark/std/recursion/groth16"
 )
 
@@ -28,23 +28,23 @@ type CircomVerificationKey struct {
 	VkAlphabeta12 [][][]string `json:"vk_alphabeta_12"` // Not used in verification
 }
 
-// GnarkRecursionPlaceholdersBLS holds placeholders for recursion over BLS12-377.
-type GnarkRecursionPlaceholdersBLS struct {
-	Vk      recursion.VerifyingKey[sw_bls12377.G1Affine, sw_bls12377.G2Affine, sw_bls12377.GT]
-	Witness recursion.Witness[sw_bls12377.ScalarField]
-	Proof   recursion.Proof[sw_bls12377.G1Affine, sw_bls12377.G2Affine]
+// GnarkRecursionPlaceholdersBN254 holds placeholders for recursion over BN254.
+type GnarkRecursionPlaceholdersBN254 struct {
+	Vk      recursion.VerifyingKey[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl]
+	Witness recursion.Witness[sw_bn254.ScalarField]
+	Proof   recursion.Proof[sw_bn254.G1Affine, sw_bn254.G2Affine]
 }
 
-// GnarkRecursionProofBLS carries a BLS12-377 proof formatted for recursion.
-type GnarkRecursionProofBLS struct {
-	Proof        recursion.Proof[sw_bls12377.G1Affine, sw_bls12377.G2Affine]
-	Vk           recursion.VerifyingKey[sw_bls12377.G1Affine, sw_bls12377.G2Affine, sw_bls12377.GT]
-	PublicInputs recursion.Witness[sw_bls12377.ScalarField]
+// GnarkRecursionProofBN254 carries a BN254 proof formatted for recursion.
+type GnarkRecursionProofBN254 struct {
+	Proof        recursion.Proof[sw_bn254.G1Affine, sw_bn254.G2Affine]
+	Vk           recursion.VerifyingKey[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl]
+	PublicInputs recursion.Witness[sw_bn254.ScalarField]
 }
 
-// GnarkProofBLS is a non-recursive proof over BLS12-377.
-type GnarkProofBLS struct {
-	Proof        *groth16_bls12377.Proof
-	VerifyingKey *groth16_bls12377.VerifyingKey
-	PublicInputs []bls12377fr.Element
+// GnarkProofBN254 is a non-recursive proof over BN254.
+type GnarkProofBN254 struct {
+	Proof        *groth16_bn254.Proof
+	VerifyingKey *groth16_bn254.VerifyingKey
+	PublicInputs []bn254fr.Element
 }

@@ -2,19 +2,19 @@
 // proof formats, allowing for verification of zkSNARK proofs created with
 // Circom and SnarkJS to be used within the Gnark framework.
 // It includes functions to convert Circom proofs and verification keys to
-// Gnark over the BLS12-377 curve, and to verify these proofs using Gnark's
+// Gnark over the BN254 curve, and to verify these proofs using Gnark's
 // verification functions. It also provides a way to handle recursive proofs
 // and placeholders for recursive circuits.
 package circom2gnark
 
-// Circom2GnarkProofForRecursionBLS converts a Circom BLS12-377 proof into a Gnark recursion proof with fixed VK.
-func Circom2GnarkProofForRecursionBLS(vkey []byte, rawCircomProof, rawPubSignals string) (*GnarkRecursionProofBLS, error) {
-	return Circom2GnarkProofForRecursionBLSWithVK(vkey, rawCircomProof, rawPubSignals, true)
+// Circom2GnarkProofForRecursionBN254 converts a Circom BN254 proof into a Gnark recursion proof with fixed VK.
+func Circom2GnarkProofForRecursionBN254(vkey []byte, rawCircomProof, rawPubSignals string) (*GnarkRecursionProofBN254, error) {
+	return Circom2GnarkProofForRecursionBN254WithVK(vkey, rawCircomProof, rawPubSignals, true)
 }
 
-// Circom2GnarkProofForRecursionBLSWithVK converts a Circom BLS12-377 proof into a Gnark recursion proof,
+// Circom2GnarkProofForRecursionBN254WithVK converts a Circom BN254 proof into a Gnark recursion proof,
 // allowing the caller to decide whether the verifying key is fixed in-circuit.
-func Circom2GnarkProofForRecursionBLSWithVK(vkey []byte, rawCircomProof, rawPubSignals string, fixedVk bool) (*GnarkRecursionProofBLS, error) {
+func Circom2GnarkProofForRecursionBN254WithVK(vkey []byte, rawCircomProof, rawPubSignals string, fixedVk bool) (*GnarkRecursionProofBN254, error) {
 	circomProof, circomPubSignals, err := UnmarshalCircom(rawCircomProof, rawPubSignals)
 	if err != nil {
 		return nil, err
@@ -23,25 +23,25 @@ func Circom2GnarkProofForRecursionBLSWithVK(vkey []byte, rawCircomProof, rawPubS
 	if err != nil {
 		return nil, err
 	}
-	return circomProof.ToGnarkRecursionBLS(circomVerificationKey, circomPubSignals, fixedVk)
+	return circomProof.ToGnarkRecursionBN254(circomVerificationKey, circomPubSignals, fixedVk)
 }
 
-// Circom2GnarkPlaceholderBLS creates placeholders for BLS12-377 recursion circuits with fixed VK.
-func Circom2GnarkPlaceholderBLS(vkey []byte, nInputs int) (*GnarkRecursionPlaceholdersBLS, error) {
-	return Circom2GnarkPlaceholderBLSWithVK(vkey, nInputs, true)
+// Circom2GnarkPlaceholderBN254 creates placeholders for BN254 recursion circuits with fixed VK.
+func Circom2GnarkPlaceholderBN254(vkey []byte, nInputs int) (*GnarkRecursionPlaceholdersBN254, error) {
+	return Circom2GnarkPlaceholderBN254WithVK(vkey, nInputs, true)
 }
 
-// Circom2GnarkPlaceholderBLSWithVK creates placeholders for BLS12-377 recursion circuits and lets caller choose fixed VK.
-func Circom2GnarkPlaceholderBLSWithVK(vkey []byte, nInputs int, fixedVk bool) (*GnarkRecursionPlaceholdersBLS, error) {
+// Circom2GnarkPlaceholderBN254WithVK creates placeholders for BN254 recursion circuits and lets caller choose fixed VK.
+func Circom2GnarkPlaceholderBN254WithVK(vkey []byte, nInputs int, fixedVk bool) (*GnarkRecursionPlaceholdersBN254, error) {
 	gnarkVKeyData, err := UnmarshalCircomVerificationKeyJSON(vkey)
 	if err != nil {
 		return nil, err
 	}
-	return PlaceholdersForRecursionBLS(gnarkVKeyData, nInputs, fixedVk)
+	return PlaceholdersForRecursionBN254(gnarkVKeyData, nInputs, fixedVk)
 }
 
-// VerifyCircomProofBLS verifies a Circom BLS12-377 proof natively using gnark-crypto.
-func VerifyCircomProofBLS(vkey []byte, rawProof string, pubSignals []string) (bool, error) {
+// VerifyCircomProofBN254 verifies a Circom BN254 proof natively using gnark-crypto.
+func VerifyCircomProofBN254(vkey []byte, rawProof string, pubSignals []string) (bool, error) {
 	circomProof, circomPubSignals, err := UnmarshalCircom(rawProof, stringMustJSON(pubSignals))
 	if err != nil {
 		return false, err
@@ -50,7 +50,7 @@ func VerifyCircomProofBLS(vkey []byte, rawProof string, pubSignals []string) (bo
 	if err != nil {
 		return false, err
 	}
-	gnarkProof, err := circomProof.ToGnarkProofBLS(circomVerificationKey, circomPubSignals)
+	gnarkProof, err := circomProof.ToGnarkProofBN254(circomVerificationKey, circomPubSignals)
 	if err != nil {
 		return false, err
 	}
