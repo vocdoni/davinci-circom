@@ -1,5 +1,10 @@
 import { BallotBuilder } from '@vocdoni/davinci-circom';
 import * as snarkjs from 'snarkjs';
+import { Buffer } from 'buffer';
+import process from 'process';
+
+self.Buffer = Buffer;
+self.process = process;
 
 self.onmessage = async (e) => {
     const { type, args, wasm, zkey, singleThread } = e.data;

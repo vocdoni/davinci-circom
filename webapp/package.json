@@ -10,11 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "bootstrap": "^5.3.8",
     "@vocdoni/davinci-circom": "file:../js",
+    "assert": "^2.1.0",
+    "bootstrap": "^5.3.8",
+    "buffer": "^6.0.3",
+    "circomlibjs": "^0.1.7",
+    "events": "^3.3.0",
+    "ffjavascript": "^0.3.1",
+    "process": "^0.11.10",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "snarkjs": "^0.7.5",
+    "snarkjs": "^0.7.6",
+    "stream-browserify": "^3.0.0",
+    "util": "^0.12.5",
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "devDependencies": {
