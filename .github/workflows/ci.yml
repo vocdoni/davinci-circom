@@ -1,0 +1,37 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-push-{0}-{1}', github.ref, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Compile circuits
+        run: make prepare
+      - name: Describe version
+        uses: choffmeister/git-describe-semver@main
+        id: git-describe-semver
+        with:
+          fallback: v0.0.0
+          prerelease-timestamped: true
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: davinci-circom-circuits-artifacts@${{ steps.git-describe-semver.outputs.version }}
+          path: |
+            artifacts/*
+            !artifacts/ptau*
+      - name: Run tests
+        run: make test
