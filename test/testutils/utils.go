@@ -2,10 +2,17 @@ package testutils
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+)
+
+const (
+	VoteIDHashBits = 63
+
+	VoteIDMin uint64 = (math.MaxUint64 - 1<<VoteIDHashBits) + 1 // = 0x8000_0000_0000_0000
 )
 
 // RandomK returns randomness in the BN254 scalar field.
@@ -43,7 +50,7 @@ func MultiHash(inputs []*big.Int) (*big.Int, error) {
 	if nInputs <= 16 {
 		return PoseidonHash(inputs...)
 	}
-	
+
 	var intermediateHashes []*big.Int
 	for i := 0; i < nInputs; i += 16 {
 		end := i + 16
@@ -57,7 +64,7 @@ func MultiHash(inputs []*big.Int) (*big.Int, error) {
 		}
 		intermediateHashes = append(intermediateHashes, h)
 	}
-	
+
 	return PoseidonHash(intermediateHashes...)
 }
 
@@ -66,13 +73,16 @@ func VoteID(bigPID, bigAddr, k *big.Int) (*big.Int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate vote ID: %v", err)
 	}
-	return TruncateTo160Bits(hash), nil
+	hashTruncated := TruncateToLowerBits(hash, VoteIDHashBits)
+	voteIDMin := new(big.Int).SetUint64(VoteIDMin)
+	return new(big.Int).Add(voteIDMin, hashTruncated), nil
 }
 
-func TruncateTo160Bits(input *big.Int) *big.Int {
-	mask := new(big.Int).Lsh(big.NewInt(1), 160) // 1 << 160
-	mask.Sub(mask, big.NewInt(1))                // (1 << 160) - 1
-	return new(big.Int).And(input, mask)         // input & ((1<<160)-1)
+// TruncateToLowerBits returns a big.Int truncated to the least-significant `bits`.
+func TruncateToLowerBits(input *big.Int, bits uint) *big.Int {
+	mask := new(big.Int).Lsh(big.NewInt(1), bits) // 1 << bits
+	mask.Sub(mask, big.NewInt(1))                 // (1 << bits) - 1
+	return new(big.Int).And(input, mask)          // input & ((1 << bits) - 1)
 }
 
 // DerivePoseidonChain derives n+1 values where out[0]=seed and out[i+1]=Hash(out[i]).
