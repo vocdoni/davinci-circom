@@ -55,11 +55,8 @@ for C in $CIRCUIT; do
   # Check if ptau exists
   PTAU_FILE="$ARTIFACTS_DIR/ptau_final.ptau"
   if [ ! -f "$PTAU_FILE" ]; then
-      echo "Generating ptau file for bn128..."
-      $SNARKJS powersoftau new bn128 18 "$ARTIFACTS_DIR/ptau_0.ptau" -v
-      $SNARKJS powersoftau contribute "$ARTIFACTS_DIR/ptau_0.ptau" "$ARTIFACTS_DIR/ptau_1.ptau" --name="First contribution" -v -e="random text"
-      $SNARKJS powersoftau prepare phase2 "$ARTIFACTS_DIR/ptau_1.ptau" "$PTAU_FILE" -v
-      rm "$ARTIFACTS_DIR/ptau_0.ptau" "$ARTIFACTS_DIR/ptau_1.ptau"
+      echo "Downloading ptau file..."
+      wget --progress=dot:giga https://pse-trusted-setup-ppot.s3.eu-central-1.amazonaws.com/pot28_0080/ppot_0080_18.ptau -O $PTAU_FILE
   fi
   
   # Setup (Groth16)
