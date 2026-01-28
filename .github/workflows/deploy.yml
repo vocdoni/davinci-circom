@@ -32,6 +32,12 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf git@github.com:
 
+      - name: Copy circuit artifacts to webapp
+        run: |
+          cp artifacts/ballot_proof.wasm webapp/public/
+          cp artifacts/ballot_proof_pkey.zkey webapp/public/
+          cp artifacts/ballot_proof_vkey.json webapp/public/
+
       - name: Install and Build
         working-directory: ./webapp
         run: |

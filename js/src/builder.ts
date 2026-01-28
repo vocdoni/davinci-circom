@@ -1,6 +1,67 @@
 import { buildElGamal, ElGamal } from './elgamal.js';
 import { buildPoseidon } from 'circomlibjs';
 
+// BN254 scalar field modulus (Fr)
+export const FIELD_MODULUS = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
+// Scaling factor for RTE <-> TE conversion
+// This is used to convert between Gnark's BabyJubJub (Reduced Twisted Edwards)
+// and Iden3/Circomlibjs BabyJubJub (Standard Twisted Edwards)
+export const SCALING_FACTOR = 6360561867910373094066688120553762416144456282423235903351243436111059670888n;
+
+/**
+ * Modular inverse using extended Euclidean algorithm
+ */
+function modInverse(a: bigint, m: bigint): bigint {
+    let [old_r, r] = [a, m];
+    let [old_s, s] = [1n, 0n];
+
+    while (r !== 0n) {
+        const quotient = old_r / r;
+        [old_r, r] = [r, old_r - quotient * r];
+        [old_s, s] = [s, old_s - quotient * s];
+    }
+
+    return ((old_s % m) + m) % m;
+}
+
+/**
+ * Modular arithmetic helper
+ */
+function mod(n: bigint, m: bigint): bigint {
+    return ((n % m) + m) % m;
+}
+
+/**
+ * FromRTEtoTE converts a point from Reduced TwistedEdwards (Gnark) to TwistedEdwards (Circom/Iden3) coordinates.
+ * It applies the transformation:
+ *      x = x' / (-f)
+ *      y = y'
+ * 
+ * This matches the Go implementation in davinci-node/crypto/ecc/format/twistededwards.go
+ */
+export function fromRTEtoTE(x: bigint, y: bigint): [bigint, bigint] {
+    // Calculate -f mod p
+    const negF = mod(-SCALING_FACTOR, FIELD_MODULUS);
+    // Calculate (-f)^-1 mod p
+    const negFInv = modInverse(negF, FIELD_MODULUS);
+    // xTE = x * (-f)^-1 mod p
+    const xTE = mod(x * negFInv, FIELD_MODULUS);
+    return [xTE, y];
+}
+
+/**
+ * FromTEtoRTE converts a point from TwistedEdwards (Circom/Iden3) to Reduced TwistedEdwards (Gnark) coordinates.
+ * It applies the transformation:
+ *      x' = x * (-f)
+ *      y' = y
+ */
+export function fromTEtoRTE(x: bigint, y: bigint): [bigint, bigint] {
+    const negF = mod(-SCALING_FACTOR, FIELD_MODULUS);
+    const xRTE = mod(x * negF, FIELD_MODULUS);
+    return [xRTE, y];
+}
+
 export interface BallotConfig {
     numFields: number;
     uniqueValues: number;
@@ -10,6 +71,51 @@ export interface BallotConfig {
     minValueSum: number;
     costExponent: number;
     costFromWeight: number;
+}
+
+/**
+ * Sequencer data format - the raw data from a DAVINCI sequencer
+ * Note: pubKeyX and pubKeyY are in RTE format (Gnark BabyJubJub)
+ */
+export interface SequencerProcessData {
+    processId: string;      // hex string (with or without 0x prefix)
+    address: string;        // hex string (with or without 0x prefix)
+    pubKeyX: string;        // decimal string - RTE X coordinate
+    pubKeyY: string;        // decimal string - RTE Y coordinate
+    ballotMode: {
+        numFields: number;
+        uniqueValues: boolean;
+        maxValue: string;
+        minValue: string;
+        maxValueSum: string;
+        minValueSum: string;
+        costExponent: number;
+        costFromWeight: boolean;
+    };
+}
+
+/**
+ * Converts a hex string (with or without 0x prefix) to a decimal string
+ */
+export function hexToDecimal(hex: string): string {
+    const cleanHex = hex.startsWith('0x') || hex.startsWith('0X') ? hex : '0x' + hex;
+    return BigInt(cleanHex).toString();
+}
+
+/**
+ * Parses ballot mode from sequencer format to circuit format
+ */
+export function parseBallotMode(ballotMode: SequencerProcessData['ballotMode']): BallotConfig {
+    return {
+        numFields: ballotMode.numFields,
+        uniqueValues: ballotMode.uniqueValues ? 1 : 0,
+        maxValue: parseInt(ballotMode.maxValue),
+        minValue: parseInt(ballotMode.minValue),
+        maxValueSum: parseInt(ballotMode.maxValueSum),
+        minValueSum: parseInt(ballotMode.minValueSum),
+        costExponent: ballotMode.costExponent,
+        costFromWeight: ballotMode.costFromWeight ? 1 : 0,
+    };
 }
 
 export interface BallotInputs {
@@ -123,10 +229,50 @@ export class BallotBuilder {
         return this.multiHash(inputs).toString();
     }
 
+    /**
+     * Creates a public key point from TE coordinates (as strings or bigints).
+     * Use this when you already have coordinates in TE format.
+     */
+    createPubKeyFromTE(x: string | bigint, y: string | bigint): any {
+        return [
+            this.elgamal.F.e(BigInt(x)),
+            this.elgamal.F.e(BigInt(y))
+        ];
+    }
+
+    /**
+     * Creates a public key point from RTE coordinates (as strings or bigints).
+     * Use this when you have coordinates from a Gnark-based system (like the DAVINCI sequencer).
+     * This automatically converts from RTE to TE format.
+     */
+    createPubKeyFromRTE(x: string | bigint, y: string | bigint): any {
+        const [xTE, yTE] = fromRTEtoTE(BigInt(x), BigInt(y));
+        return [
+            this.elgamal.F.e(xTE),
+            this.elgamal.F.e(yTE)
+        ];
+    }
+
+    /**
+     * Generates ballot inputs for the circuit.
+     * 
+     * IMPORTANT: The pubKey must be in TE (Twisted Edwards) format as used by circomlibjs.
+     * If you have RTE coordinates from a Gnark-based system (like DAVINCI sequencer),
+     * use `createPubKeyFromRTE()` or `generateInputsFromSequencer()` instead.
+     * 
+     * @param fields - The vote field values
+     * @param weight - The voter's weight  
+     * @param pubKey - Public key as field elements [x, y] in TE format (use createPubKeyFromTE/RTE)
+     * @param processId - Process ID as decimal string
+     * @param address - Voter address as decimal string
+     * @param k - Random k value for encryption
+     * @param config - Ballot configuration
+     * @param circuitCapacity - Number of fields the circuit supports (default: 8)
+     */
     generateInputs(
         fields: number[],
         weight: number,
-        pubKey: any, // [x, y]
+        pubKey: any, // [x, y] as field elements - use createPubKeyFromTE/RTE to create
         processId: string,
         address: string,
         k: string,
@@ -191,5 +337,57 @@ export class BallotBuilder {
             cost_exponent: config.costExponent,
             cost_from_weight: config.costFromWeight,
         };
+    }
+
+    /**
+     * Generates ballot inputs from sequencer data.
+     * This is a convenience method that handles the RTE to TE conversion
+     * for the public key automatically.
+     * 
+     * @param sequencerData - Data from the DAVINCI sequencer
+     * @param fields - The vote field values
+     * @param weight - The voter's weight
+     * @param k - Optional random k value (generated if not provided)
+     * @param circuitCapacity - The number of fields the circuit supports (default: 8)
+     */
+    generateInputsFromSequencer(
+        sequencerData: SequencerProcessData,
+        fields: number[],
+        weight: number,
+        k?: string,
+        circuitCapacity: number = 8
+    ): BallotInputs {
+        // Convert process ID and address from hex to decimal
+        const processId = hexToDecimal(sequencerData.processId);
+        const address = hexToDecimal(sequencerData.address);
+
+        // Convert public key from RTE (Gnark) to TE (Circom/Iden3)
+        const [pubKeyX_TE, pubKeyY_TE] = fromRTEtoTE(
+            BigInt(sequencerData.pubKeyX),
+            BigInt(sequencerData.pubKeyY)
+        );
+
+        // Create the public key point in TE format for circomlibjs
+        const pubKey = [
+            this.elgamal.F.e(pubKeyX_TE),
+            this.elgamal.F.e(pubKeyY_TE)
+        ];
+
+        // Parse ballot mode
+        const config = parseBallotMode(sequencerData.ballotMode);
+
+        // Generate random k if not provided
+        const kValue = k ?? this.randomK();
+
+        return this.generateInputs(
+            fields,
+            weight,
+            pubKey,
+            processId,
+            address,
+            kValue,
+            config,
+            circuitCapacity
+        );
     }
 }

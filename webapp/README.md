@@ -1,25 +1,44 @@
 # ZK Proof Generator Webapp
 
-This is a simple React application to generate and verify zkSNARK proofs for the `ballot_proof` circuit using `snarkjs`.
+A React application to generate and verify zkSNARK proofs for the DAVINCI `ballot_proof` circuit using `snarkjs`.
 
 ## Setup
 
-1.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+### From the repository root (recommended)
 
-2.  **Start Development Server:**
-    ```bash
-    npm run dev
-    ```
-    Open the URL (usually `http://localhost:5173`) in your browser.
+```bash
+# Start development server with artifacts
+make webapp
+```
 
-## Logic
+### Manual setup
 
--   **Generate Proof:** Fetches `input.json`, `ballot_proof.wasm`, and `ballot_proof_pkey.zkey` from the `public/` directory. Uses `snarkjs.groth16.fullProve` to generate the proof and public signals.
--   **Verify Proof:** Fetches `ballot_proof_vkey.json` and uses `snarkjs.groth16.verify` to check the validity of the generated proof against the public signals.
+1. Copy circuit artifacts from `artifacts/` to `public/`:
+   ```bash
+   cp ../artifacts/ballot_proof.wasm public/
+   cp ../artifacts/ballot_proof_pkey.zkey public/
+   cp ../artifacts/ballot_proof_vkey.json public/
+   ```
 
-## Assets
+2. Install dependencies and start:
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-The artifacts (`.wasm`, `.zkey`, `.json`) are copied from the project's `artifacts/` directory. If you rebuild the circuits, update these files.
+Open the URL (usually `http://localhost:5173`) in your browser.
+
+## How it works
+
+- **Generate Proof:** Uses `@vocdoni/davinci-circom` to generate circuit inputs, then fetches the WASM and zkey files to generate a Groth16 proof using snarkjs.
+- **Verify Proof:** Fetches `ballot_proof_vkey.json` and uses `snarkjs.groth16.verify` to check the validity of the generated proof.
+
+## Circuit Artifacts
+
+The circuit artifacts (`.wasm`, `.zkey`, `.json`) are stored in the repository's `artifacts/` directory and copied to `public/` at build time:
+
+- `ballot_proof.wasm` - The compiled circuit
+- `ballot_proof_pkey.zkey` - The proving key
+- `ballot_proof_vkey.json` - The verification key
+
+These files are **not committed** to `webapp/public/` - they are copied by the Makefile or CI pipeline.

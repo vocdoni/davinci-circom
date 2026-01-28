@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Circuit artifacts (copied from /artifacts/ at build time)
+public/ballot_proof.wasm
+public/ballot_proof_pkey.zkey
+public/ballot_proof_vkey.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
