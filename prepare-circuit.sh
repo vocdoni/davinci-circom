@@ -72,6 +72,9 @@ for C in $CIRCUIT; do
   
   # Export Verification Key
   $SNARKJS zkey export verificationkey $ZKEY $VKEY
+
+  # Export Solidity Verifier
+  $SNARKJS zkey export solidityverifier $ZKEY "$ARTIFACTS_DIR/${NAME}_verifier.sol"
   
   # Move WASM
   WASM_DIR="$ARTIFACTS_DIR/${NAME}_js"

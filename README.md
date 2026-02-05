@@ -7,6 +7,7 @@ The circuits are optimized for the **BN254** curve and use **Poseidon** for hash
  * **Ballot checker** ([`ballot_checker.circom`](./circuits/ballot_checker.circom)): Checks that the ballot is valid under the params provided as inputs.
  * **Ballot cipher** ([`ballot_cipher.circom`](./circuits/ballot_cipher.circom)): Encrypts the ballot fields using ElGamal on the BabyJubJub curve and checks if they match with the provided ones.
  * **Ballot proof** ([`ballot_proof.circom`](./circuits/ballot_proof.circom)): Checks the ballot and its encryption, calculates the vote ID, and verifies the hash of all inputs using Poseidon MultiHash. It exposes `inputs_hash`, `address`, and `vote_id` as public signals.
+* **State proof** ([`state_proof.circom`](./circuits/state_proof.circom)): Recomputes the initial state root from the process parameters (process ID, ballot mode, encryption key, census origin) and enforces it matches the public `state_root`.
 
 ## Circuit Constraints
 
@@ -18,6 +19,7 @@ Below are the constraint counts for the main circuits and components (configured
 | **BallotCipher** | 56,104 | ElGamal encryption of 8 fields on BabyJubJub |
 | **VoteIDChecker** | 518 | Computes and verifies Vote ID (Poseidon hash) |
 | **BallotProof** | **68,721** | **Total** (Includes all components + Input Hashing) |
+| **StateProof** | 13,434 | Recomputes the initial state root (process metadata + encryption key) |
 
 ## Usage
 
