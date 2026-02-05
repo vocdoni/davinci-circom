@@ -24,6 +24,12 @@ const (
 	BallotCipherWasm = "ballot_cipher_test.wasm"
 	BallotCipherZkey = "ballot_cipher_test_pkey.zkey"
 	BallotCipherVkey = "ballot_cipher_test_vkey.json"
+
+	// State Proof
+	StateProofWasm = "state_proof.wasm"
+	StateProofZkey = "state_proof_pkey.zkey"
+	StateProofVkey = "state_proof_vkey.json"
+	StateProofR1CS = "state_proof.r1cs"
 )
 
 // FindRepoRoot attempts to find the repository root by looking for the artifacts directory.
