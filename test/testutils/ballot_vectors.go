@@ -4,30 +4,29 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"math/big"
+	"strconv"
+
+	"github.com/vocdoni/davinci-node/spec"
+	spechash "github.com/vocdoni/davinci-node/spec/hash"
+	specparams "github.com/vocdoni/davinci-node/spec/params"
+	spectestutil "github.com/vocdoni/davinci-node/spec/testutil"
+	specutil "github.com/vocdoni/davinci-node/spec/util"
 )
 
 // BallotVectors holds a reproducible set of inputs for the ballot circuits.
 type BallotVectors struct {
-	Fields         []int
-	Weight         int
-	PubKeyX        *big.Int
-	PubKeyY        *big.Int
-	Cipherfields   [][2][2]*big.Int
-	ProcessID      *big.Int
-	Address        *big.Int
-	K              *big.Int
-	VoteID         *big.Int
-	InputsHash     *big.Int
-	NumFields      int
-	GroupSize      int
-	UniqueValues   int
-	MaxValue       int
-	MinValue       int
-	MaxValueSum    int
-	MinValueSum    int
-	CostExponent   int
-	CostFromWeight int
-	PackedBallot   *big.Int
+	Fields       []int
+	Weight       int
+	PubKeyX      *big.Int
+	PubKeyY      *big.Int
+	Cipherfields [][2][2]*big.Int
+	ProcessID    *big.Int
+	Address      *big.Int
+	K            *big.Int
+	VoteID       uint64
+	InputsHash   *big.Int
+	spec.BallotMode
+	PackedBallot *big.Int
 }
 
 func randomBytes(n int) []byte {
@@ -36,141 +35,82 @@ func randomBytes(n int) []byte {
 	return b
 }
 
-func packBallotMode(
-	numFields int,
-	groupSize int,
-	uniqueValues int,
-	costFromWeight int,
-	costExponent int,
-	maxValue int,
-	minValue int,
-	maxValueSum int,
-	minValueSum int,
-) *big.Int {
-	packed := new(big.Int)
-	addShift := func(value int, shift uint) {
-		packed.Add(packed, new(big.Int).Lsh(big.NewInt(int64(value)), shift))
-	}
-
-	addShift(numFields, 0)
-	addShift(groupSize, 8)
-	addShift(uniqueValues, 16)
-	addShift(costFromWeight, 17)
-	addShift(costExponent, 18)
-	addShift(maxValue, 26)
-	addShift(minValue, 74)
-	addShift(maxValueSum, 122)
-	addShift(minValueSum, 185)
-
-	return packed
-}
-
 // BuildBallotVectors creates fresh valid inputs matching the circom ballot circuits.
 func BuildBallotVectors() (*BallotVectors, error) {
-	nFields := 8
-	maxValue := 16
-	maxValueSum := 1125
-	minValue := 0
-	minValueSum := 5
-	uniqueValues := 1
-	costExponent := 2
-	costFromWeight := 0
-	numFields := 5
-	groupSize := numFields
+	bm := spectestutil.FixedBallotMode()
+	packedBallot, err := bm.Pack()
+	if err != nil {
+		return nil, err
+	}
+	nFields := specparams.FieldsPerBallot
 
 	fields := make([]int, nFields)
-	for i := 0; i < numFields; i++ {
+	for i := range int(bm.NumFields) {
 		fields[i] = i + 1
 	}
 	weight := 1
 
-	// Updated to use the new GenerateKeyPair that returns (priv, x, y)
 	_, pubX, pubY := GenerateKeyPair()
 
-	k, err := RandomK()
+	k, err := specutil.RandomK()
 	if err != nil {
 		return nil, err
 	}
 
-	ks, err := DerivePoseidonChain(k, nFields)
+	ks, err := spechash.DerivePoseidonChain(k, nFields)
 	if err != nil {
 		return nil, err
 	}
 
 	cipherfields := make([][2][2]*big.Int, nFields)
-	for i := 0; i < nFields; i++ {
-		// Updated Encrypt call signature: Encrypt(msg, pubX, pubY, k)
+	ballot := make([]*big.Int, 0, nFields*4)
+	for i := range nFields {
 		c1, c2 := Encrypt(big.NewInt(int64(fields[i])), pubX, pubY, ks[i+1])
 		cipherfields[i] = [2][2]*big.Int{
 			{new(big.Int).Set(&c1[0]), new(big.Int).Set(&c1[1])},
 			{new(big.Int).Set(&c2[0]), new(big.Int).Set(&c2[1])},
 		}
+		ballot = append(ballot,
+			cipherfields[i][0][0], cipherfields[i][0][1],
+			cipherfields[i][1][0], cipherfields[i][1][1],
+		)
 	}
 
 	processID := new(big.Int).SetBytes(randomBytes(20))
 	address := new(big.Int).SetBytes(randomBytes(20))
 
-	// voteID uses priv K directly
-	voteID, err := VoteID(processID, address, k)
+	voteID, err := spec.VoteID(processID, address, k)
 	if err != nil {
 		return nil, err
 	}
 
-	var inputsList []*big.Int
-	inputsList = append(inputsList, processID)
-	packedBallot := packBallotMode(
-		numFields,
-		groupSize,
-		uniqueValues,
-		costFromWeight,
-		costExponent,
-		maxValue,
-		minValue,
-		maxValueSum,
-		minValueSum,
+	inputsHash, err := spec.BallotInputsHashRTE(
+		processID,
+		bm,
+		pubX,
+		pubY,
+		address,
+		voteID,
+		ballot,
+		big.NewInt(int64(weight)),
 	)
-	inputsList = append(inputsList, packedBallot)
-
-	inputsList = append(inputsList, pubX)
-	inputsList = append(inputsList, pubY)
-
-	inputsList = append(inputsList, address)
-	inputsList = append(inputsList, voteID)
-
-	for i := 0; i < nFields; i++ {
-		inputsList = append(inputsList, cipherfields[i][0][0])
-		inputsList = append(inputsList, cipherfields[i][0][1])
-		inputsList = append(inputsList, cipherfields[i][1][0])
-		inputsList = append(inputsList, cipherfields[i][1][1])
-	}
-	inputsList = append(inputsList, big.NewInt(int64(weight)))
-
-	inputsHash, err := MultiHash(inputsList)
 	if err != nil {
 		return nil, err
 	}
 
 	return &BallotVectors{
-		Fields:         fields,
-		Weight:         weight,
-		PubKeyX:        pubX,
-		PubKeyY:        pubY,
-		Cipherfields:   cipherfields,
-		ProcessID:      processID,
-		Address:        address,
-		K:              k,
-		VoteID:         voteID,
-		InputsHash:     inputsHash,
-		NumFields:      numFields,
-		GroupSize:      groupSize,
-		UniqueValues:   uniqueValues,
-		MaxValue:       maxValue,
-		MinValue:       minValue,
-		MaxValueSum:    maxValueSum,
-		MinValueSum:    minValueSum,
-		CostExponent:   costExponent,
-		CostFromWeight: costFromWeight,
-		PackedBallot:   packedBallot,
+		Fields:       fields,
+		Weight:       weight,
+		PubKeyX:      pubX,
+		PubKeyY:      pubY,
+		Cipherfields: cipherfields,
+		ProcessID:    processID,
+		Address:      address,
+		K:            k,
+		VoteID:       voteID,
+		InputsHash:   inputsHash,
+		BallotMode:   bm,
+		PackedBallot: packedBallot,
 	}, nil
 }
 
@@ -184,7 +124,7 @@ func (b *BallotVectors) InputsMap() map[string]any {
 		"process_id":         b.ProcessID.String(),
 		"address":            b.Address.String(),
 		"k":                  b.K.String(),
-		"vote_id":            b.VoteID.String(),
+		"vote_id":            strconv.FormatUint(b.VoteID, 10),
 		"inputs_hash":        b.InputsHash.String(),
 		"packed_ballot_mode": b.PackedBallot.String(),
 	}

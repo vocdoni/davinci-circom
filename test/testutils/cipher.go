@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
+	specutil "github.com/vocdoni/davinci-node/spec/util"
 )
 
 // scalingFactor used to transform between BabyJubJub forms.
@@ -14,8 +15,8 @@ var scalingFactor, _ = new(big.Int).SetString("636056186791037309406668812055376
 // FromRTEtoTE converts a point from Reduced TwistedEdwards (Gnark) to TwistedEdwards (Circom/Iden3) coordinates.
 // It applies the transformation:
 //
-//      x = x'/(-f)
-//      y = y'
+//	x = x'/(-f)
+//	y = y'
 func FromRTEtoTE(x, y *big.Int) (*big.Int, *big.Int) {
 	var f fr.Element
 	f.SetBigInt(scalingFactor)
@@ -40,9 +41,9 @@ func FromRTEtoTE(x, y *big.Int) (*big.Int, *big.Int) {
 func GenerateKeyPair() (*big.Int, *big.Int, *big.Int) {
 	// Generate key on Gnark's BabyJubJub (Reduced Twisted Edwards, a=-1)
 	curve := twistededwards.GetEdwardsCurve()
-	
+
 	// Create private key in subgroup
-	priv, err := randK()
+	priv, err := specutil.RandomK()
 	if err != nil {
 		panic(err)
 	}
@@ -58,12 +59,6 @@ func GenerateKeyPair() (*big.Int, *big.Int, *big.Int) {
 	// Convert to Circom coordinates
 	xTE, yTE := FromRTEtoTE(xRTE, yRTE)
 	return priv, xTE, yTE
-}
-
-func randK() (*big.Int, error) {
-	var k fr.Element
-	k.SetRandom()
-	return k.BigInt(new(big.Int)), nil
 }
 
 // Encrypt encrypts message with the provided public key (in Circom form) and randomness k.
