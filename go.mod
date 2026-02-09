@@ -3,10 +3,10 @@ module github.com/vocdoni/davinci-circom
 go 1.25.5
 
 require (
-	github.com/consensys/gnark v0.14.1-0.20260114231350-0d7ec1c4ee8a
-	github.com/consensys/gnark-crypto v0.19.3-0.20260112024438-37b4567dc66f
+	github.com/consensys/gnark v0.14.1-0.20260126121332-407111efab55
+	github.com/consensys/gnark-crypto v0.19.3-0.20260126145145-b5cf053fbc34
 	github.com/frankban/quicktest v1.14.6
-	github.com/iden3/go-iden3-crypto v0.0.17
+	github.com/vocdoni/davinci-node/spec v0.0.0-20260210223636-e85fc7c89da9
 )
 
 require (
@@ -16,6 +16,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
+	github.com/iden3/go-iden3-crypto v0.0.17 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -26,9 +27,8 @@ require (
 	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

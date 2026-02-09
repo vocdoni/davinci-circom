@@ -8,6 +8,8 @@ import (
 
 	qt "github.com/frankban/quicktest"
 	"github.com/vocdoni/davinci-circom/test/testutils"
+	spechash "github.com/vocdoni/davinci-node/spec/hash"
+	specutil "github.com/vocdoni/davinci-node/spec/util"
 )
 
 func TestBallotCipher(t *testing.T) {
@@ -22,12 +24,12 @@ func TestBallotCipher(t *testing.T) {
 
 	// encrypt ballot
 	_, pubX, pubY := testutils.GenerateKeyPair()
-	
-	k, err := testutils.RandomK()
+
+	k, err := specutil.RandomK()
 	c.Assert(err, qt.IsNil, qt.Commentf("Error generating random k"))
 
 	// Circuit derives k_i = Poseidon(k_{i-1}) per field; we only have one field.
-	ks, err := testutils.DerivePoseidonChain(k, 1)
+	ks, err := spechash.DerivePoseidonChain(k, 1)
 	c.Assert(err, qt.IsNil, qt.Commentf("derive ks"))
 
 	msg := big.NewInt(3)
