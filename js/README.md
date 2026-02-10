@@ -238,14 +238,7 @@ interface BallotInputs {
     k: string;
     vote_id: string;
     inputs_hash: string;
-    num_fields: number;
-    unique_values: number;
-    max_value: number;
-    min_value: number;
-    max_value_sum: number;
-    min_value_sum: number;
-    cost_exponent: number;
-    cost_from_weight: number;
+    packed_ballot_mode: string;
 }
 ```
 
@@ -279,6 +272,7 @@ The circuit ballot configuration format:
 ```typescript
 interface BallotConfig {
     numFields: number;
+    groupSize?: number;
     uniqueValues: number;   // 0 or 1
     maxValue: number;
     minValue: number;

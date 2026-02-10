@@ -32,7 +32,8 @@ describe("Integration: Poseidon + ElGamal", function () {
     it("should generate valid inputs for multiple fields (Rate 5)", async () => {
         const builder = await BallotBuilder.build();
         const config = {
-            numFields: 8,
+            numFields: 5,
+            groupSize: 5,
             uniqueValues: 1,
             maxValue: 16,
             minValue: 0,
@@ -52,7 +53,7 @@ describe("Integration: Poseidon + ElGamal", function () {
         expect(inputs.fields).to.have.lengthOf(8);
         expect(inputs.fields.slice(0, 5)).to.deep.equal(fields);
         expect(inputs.fields.slice(5)).to.deep.equal([0, 0, 0]);
-        expect(inputs.num_fields).to.equal(5);
+        expect(inputs.packed_ballot_mode).to.equal(builder.packBallotMode(config).toString());
         expect(inputs.cipherfields).to.have.lengthOf(8);
         expect(inputs.inputs_hash).to.be.a('string');
     });

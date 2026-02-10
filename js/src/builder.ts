@@ -64,6 +64,7 @@ export function fromTEtoRTE(x: bigint, y: bigint): [bigint, bigint] {
 
 export interface BallotConfig {
     numFields: number;
+    groupSize?: number;
     uniqueValues: number;
     maxValue: number;
     minValue: number;
@@ -84,6 +85,7 @@ export interface SequencerProcessData {
     pubKeyY: string;        // decimal string - RTE Y coordinate
     ballotMode: {
         numFields: number;
+        groupSize?: number;
         uniqueValues: boolean;
         maxValue: string;
         minValue: string;
@@ -108,6 +110,7 @@ export function hexToDecimal(hex: string): string {
 export function parseBallotMode(ballotMode: SequencerProcessData['ballotMode']): BallotConfig {
     return {
         numFields: ballotMode.numFields,
+        groupSize: ballotMode.groupSize ?? ballotMode.numFields,
         uniqueValues: ballotMode.uniqueValues ? 1 : 0,
         maxValue: parseInt(ballotMode.maxValue),
         minValue: parseInt(ballotMode.minValue),
@@ -128,15 +131,7 @@ export interface BallotInputs {
     k: string;
     vote_id: string;
     inputs_hash: string;
-    // Config
-    num_fields: number;
-    unique_values: number;
-    max_value: number;
-    min_value: number;
-    max_value_sum: number;
-    min_value_sum: number;
-    cost_exponent: number;
-    cost_from_weight: number;
+    packed_ballot_mode: string;
 }
 
 export class BallotBuilder {
@@ -229,6 +224,21 @@ export class BallotBuilder {
         return this.multiHash(inputs).toString();
     }
 
+    packBallotMode(config: BallotConfig): bigint {
+        const groupSize = config.groupSize ?? config.numFields;
+        let packed = 0n;
+        packed |= BigInt(config.numFields);
+        packed |= BigInt(groupSize) << 8n;
+        packed |= BigInt(config.uniqueValues) << 16n;
+        packed |= BigInt(config.costFromWeight) << 17n;
+        packed |= BigInt(config.costExponent) << 18n;
+        packed |= BigInt(config.maxValue) << 26n;
+        packed |= BigInt(config.minValue) << 74n;
+        packed |= BigInt(config.maxValueSum) << 122n;
+        packed |= BigInt(config.minValueSum) << 185n;
+        return packed;
+    }
+
     /**
      * Creates a public key point from TE coordinates (as strings or bigints).
      * Use this when you already have coordinates in TE format.
@@ -279,23 +289,15 @@ export class BallotBuilder {
         config: BallotConfig,
         circuitCapacity: number = 8
     ): BallotInputs {
-        const activeFields = fields.length;
-        
         const { cipherfields, paddedFields } = this.encryptFields(fields, pubKey, k, circuitCapacity);
         const voteId = this.computeVoteID(processId, address, k);
+        const packedBallotMode = this.packBallotMode(config);
 
         // Build Inputs Hash - MUST MATCH ballot_proof.circom ORDER
         const inputsList: any[] = [];
         
         inputsList.push(BigInt(processId));
-        inputsList.push(BigInt(activeFields)); // num_fields
-        inputsList.push(BigInt(config.uniqueValues));
-        inputsList.push(BigInt(config.maxValue));
-        inputsList.push(BigInt(config.minValue));
-        inputsList.push(BigInt(config.maxValueSum));
-        inputsList.push(BigInt(config.minValueSum));
-        inputsList.push(BigInt(config.costExponent));
-        inputsList.push(BigInt(config.costFromWeight));
+        inputsList.push(mod(packedBallotMode, FIELD_MODULUS));
         
         inputsList.push(BigInt(this.elgamal.F.toString(pubKey[0], 10)));
         inputsList.push(BigInt(this.elgamal.F.toString(pubKey[1], 10)));
@@ -327,15 +329,7 @@ export class BallotBuilder {
             k,
             vote_id: voteId,
             inputs_hash: inputsHash,
-            // Config
-            num_fields: activeFields,
-            unique_values: config.uniqueValues,
-            max_value: config.maxValue,
-            min_value: config.minValue,
-            max_value_sum: config.maxValueSum,
-            min_value_sum: config.minValueSum,
-            cost_exponent: config.costExponent,
-            cost_from_weight: config.costFromWeight,
+            packed_ballot_mode: packedBallotMode.toString(),
         };
     }
 

@@ -7,7 +7,49 @@ The circuits are optimized for the **BN254** curve and use **Poseidon** for hash
  * **Ballot checker** ([`ballot_checker.circom`](./circuits/ballot_checker.circom)): Checks that the ballot is valid under the params provided as inputs.
  * **Ballot cipher** ([`ballot_cipher.circom`](./circuits/ballot_cipher.circom)): Encrypts the ballot fields using ElGamal on the BabyJubJub curve and checks if they match with the provided ones.
  * **Ballot proof** ([`ballot_proof.circom`](./circuits/ballot_proof.circom)): Checks the ballot and its encryption, calculates the vote ID, and verifies the hash of all inputs using Poseidon MultiHash. It exposes `inputs_hash`, `address`, and `vote_id` as public signals.
-* **State proof** ([`state_proof.circom`](./circuits/state_proof.circom)): Recomputes the initial state root from the process parameters (process ID, ballot mode, encryption key, census origin) and enforces it matches the public `state_root`.
+
+## BallotMode Packed Serialization (State Root)
+
+To reduce on-chain hashing costs, ballot mode can be serialized into a single BN254 field element (248 bits / 31 bytes) and used directly as the ballot-mode leaf value (no extra Poseidon hash). This packed representation is only used for the **state root** leaf; the ballot protocol still consumes the full ballot mode fields directly.
+
+### Fields
+
+`groupSize` is a new ballot protocol parameter that must satisfy `groupSize <= numFields`.
+
+### Bit Layout (LSB-first)
+
+| Bit range (LSB..MSB) | Size | Field | Constraint |
+| --- | --- | --- | --- |
+| 0..7 | 8 | `numFields` | `< 2^8` |
+| 8..15 | 8 | `groupSize` | `< 2^8`, `<= numFields` |
+| 16 | 1 | `uniqueValues` | `0/1` |
+| 17 | 1 | `costFromWeight` | `0/1` |
+| 18..25 | 8 | `costExponent` | `< 2^8` |
+| 26..73 | 48 | `maxValue` | `< 2^48` |
+| 74..121 | 48 | `minValue` | `< 2^48` |
+| 122..184 | 63 | `maxValueSum` | `< 2^63` |
+| 185..247 | 63 | `minValueSum` | `< 2^63` |
+
+### Packing Formula
+
+```
+packed =
+    numFields
+  | (groupSize << 8)
+  | (uniqueValues << 16)
+  | (costFromWeight << 17)
+  | (costExponent << 18)
+  | (maxValue << 26)
+  | (minValue << 74)
+  | (maxValueSum << 122)
+  | (minValueSum << 185)
+```
+
+Any value that exceeds its bit width makes the serialization invalid.
+
+### State Root Leaf Usage
+
+The state root leaf hashes use `processId`, `packedBallotMode`, and `censusOrigin` directly as Poseidon inputs (no 1‑element Poseidon). Inputs are interpreted modulo the BN254 scalar field.
 
 ## Circuit Constraints
 
@@ -15,11 +57,10 @@ Below are the constraint counts for the main circuits and components (configured
 
 | Circuit | Constraints (BN254) | Description |
 | :--- | :--- | :--- |
-| **BallotChecker** | 10,071 | Validates ballot logic (limits, weights, quadratic cost) |
+| **BallotChecker** | 1,877 | Validates ballot logic (limits, weights, quadratic cost) |
 | **BallotCipher** | 56,104 | ElGamal encryption of 8 fields on BabyJubJub |
 | **VoteIDChecker** | 518 | Computes and verifies Vote ID (Poseidon hash) |
-| **BallotProof** | **68,721** | **Total** (Includes all components + Input Hashing) |
-| **StateProof** | 13,434 | Recomputes the initial state root (process metadata + encryption key) |
+| **BallotProof** | **60,619** | **Total** (Includes all components + Input Hashing) |
 
 ## Usage
 
