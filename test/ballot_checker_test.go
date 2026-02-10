@@ -238,6 +238,7 @@ func TestBallotChecker(t *testing.T) {
 			inputs := map[string]any{
 				"fields":           ballotToStrings(padded),
 				"num_fields":       strconv.Itoa(tc.maxCount),
+				"group_size":       strconv.Itoa(tc.maxCount),
 				"unique_values":    uniq,
 				"max_value":        strconv.Itoa(tc.maxValue),
 				"min_value":        strconv.Itoa(tc.minValue),

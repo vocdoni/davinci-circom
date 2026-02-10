@@ -35,6 +35,7 @@ describe("Sequencer Test Data Integration", function () {
         pubKeyY_RTE: 16219479350243308044593790248520319281271283090548119799482663113896815349782n,
         ballotMode: {
             numFields: 2,
+            groupSize: 2,
             uniqueValues: false,
             maxValue: "3",
             minValue: "0",
@@ -101,6 +102,7 @@ describe("Sequencer Test Data Integration", function () {
         // Ballot configuration from sequencer data
         const config = {
             numFields: sequencerData.ballotMode.numFields,
+            groupSize: sequencerData.ballotMode.groupSize ?? sequencerData.ballotMode.numFields,
             uniqueValues: sequencerData.ballotMode.uniqueValues ? 1 : 0,
             maxValue: parseInt(sequencerData.ballotMode.maxValue),
             minValue: parseInt(sequencerData.ballotMode.minValue),
@@ -139,7 +141,7 @@ describe("Sequencer Test Data Integration", function () {
         // Validate the structure
         expect(inputs.fields).to.have.lengthOf(8);
         expect(inputs.fields.slice(0, 2)).to.deep.equal(fields);
-        expect(inputs.num_fields).to.equal(2);
+        expect(inputs.packed_ballot_mode).to.equal(builder.packBallotMode(config).toString());
         expect(inputs.cipherfields).to.have.lengthOf(8);
         expect(inputs.vote_id).to.be.a('string');
         expect(inputs.inputs_hash).to.be.a('string');
@@ -200,6 +202,7 @@ describe("Sequencer Test Data Integration", function () {
 
         const config = {
             numFields: 2,
+            groupSize: 2,
             uniqueValues: 0,
             maxValue: 3,
             minValue: 0,
@@ -224,14 +227,7 @@ describe("Sequencer Test Data Integration", function () {
         // Convert to the JSON format expected by snarkjs/circom
         const circuitInputs = {
             fields: inputs.fields,
-            num_fields: inputs.num_fields,
-            unique_values: inputs.unique_values,
-            max_value: inputs.max_value,
-            min_value: inputs.min_value,
-            max_value_sum: inputs.max_value_sum,
-            min_value_sum: inputs.min_value_sum,
-            cost_exponent: inputs.cost_exponent,
-            cost_from_weight: inputs.cost_from_weight,
+            packed_ballot_mode: inputs.packed_ballot_mode,
             address: inputs.address,
             weight: inputs.weight,
             process_id: inputs.process_id,
@@ -289,6 +285,7 @@ describe("Sequencer Test Data Integration", function () {
 
         const config = {
             numFields: 2,
+            groupSize: 2,
             uniqueValues: 0,
             maxValue: 3,
             minValue: 0,
@@ -363,6 +360,7 @@ describe("Sequencer Test Data Integration", function () {
             pubKeyY: "16219479350243308044593790248520319281271283090548119799482663113896815349782",
             ballotMode: {
                 numFields: 2,
+                groupSize: 2,
                 uniqueValues: false,
                 maxValue: "3",
                 minValue: "0",
@@ -435,6 +433,7 @@ describe("Sequencer Test Data Integration", function () {
 
         const config = {
             numFields: 2,
+            groupSize: 2,
             uniqueValues: 0,
             maxValue: 3,
             minValue: 0,

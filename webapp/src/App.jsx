@@ -69,6 +69,12 @@ function App() {
     try {
         // Parse Inputs in Main Thread
         const fieldsArr = fieldsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        const numFields = fieldsArr.length;
+        const effectiveConfig = {
+          ...config,
+          numFields,
+          groupSize: numFields
+        };
         
         let procIdDec = "0";
         try { procIdDec = toDecimal(processId.startsWith("0x") ? processId : "0x" + processId); } 
@@ -106,7 +112,7 @@ function App() {
                 processId: procIdDec,
                 address: addrDec,
                 k,
-                config
+                config: effectiveConfig
             },
             wasm: wasmBuffer,
             zkey: zkeyBuffer

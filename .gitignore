@@ -14,6 +14,11 @@ package-lock.json
 dist/
 .eslintcache
 
+# Foundry
+out/
+cache/
+broadcast/
+
 # Circuit artifacts directory - tracked in git
 # The artifacts/ directory contains the compiled circuit files
 # that are used by both the webapp and js tests
@@ -22,7 +27,3 @@ artifacts/*
 !artifacts/ballot_proof.wasm
 !artifacts/ballot_proof_pkey.zkey
 !artifacts/ballot_proof_vkey.json
-!artifacts/state_proof.wasm
-!artifacts/state_proof_pkey.zkey
-!artifacts/state_proof_vkey.json
-!artifacts/state_proof_verifier.sol

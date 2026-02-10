@@ -19,6 +19,7 @@ type BallotVectors struct {
 	VoteID         *big.Int
 	InputsHash     *big.Int
 	NumFields      int
+	GroupSize      int
 	UniqueValues   int
 	MaxValue       int
 	MinValue       int
@@ -26,12 +27,42 @@ type BallotVectors struct {
 	MinValueSum    int
 	CostExponent   int
 	CostFromWeight int
+	PackedBallot   *big.Int
 }
 
 func randomBytes(n int) []byte {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return b
+}
+
+func packBallotMode(
+	numFields int,
+	groupSize int,
+	uniqueValues int,
+	costFromWeight int,
+	costExponent int,
+	maxValue int,
+	minValue int,
+	maxValueSum int,
+	minValueSum int,
+) *big.Int {
+	packed := new(big.Int)
+	addShift := func(value int, shift uint) {
+		packed.Add(packed, new(big.Int).Lsh(big.NewInt(int64(value)), shift))
+	}
+
+	addShift(numFields, 0)
+	addShift(groupSize, 8)
+	addShift(uniqueValues, 16)
+	addShift(costFromWeight, 17)
+	addShift(costExponent, 18)
+	addShift(maxValue, 26)
+	addShift(minValue, 74)
+	addShift(maxValueSum, 122)
+	addShift(minValueSum, 185)
+
+	return packed
 }
 
 // BuildBallotVectors creates fresh valid inputs matching the circom ballot circuits.
@@ -45,6 +76,7 @@ func BuildBallotVectors() (*BallotVectors, error) {
 	costExponent := 2
 	costFromWeight := 0
 	numFields := 5
+	groupSize := numFields
 
 	fields := make([]int, nFields)
 	for i := 0; i < numFields; i++ {
@@ -86,21 +118,25 @@ func BuildBallotVectors() (*BallotVectors, error) {
 
 	var inputsList []*big.Int
 	inputsList = append(inputsList, processID)
-	inputsList = append(inputsList, big.NewInt(int64(numFields)))
-	inputsList = append(inputsList, big.NewInt(int64(uniqueValues)))
-	inputsList = append(inputsList, big.NewInt(int64(maxValue)))
-	inputsList = append(inputsList, big.NewInt(int64(minValue)))
-	inputsList = append(inputsList, big.NewInt(int64(maxValueSum)))
-	inputsList = append(inputsList, big.NewInt(int64(minValueSum)))
-	inputsList = append(inputsList, big.NewInt(int64(costExponent)))
-	inputsList = append(inputsList, big.NewInt(int64(costFromWeight)))
-	
+	packedBallot := packBallotMode(
+		numFields,
+		groupSize,
+		uniqueValues,
+		costFromWeight,
+		costExponent,
+		maxValue,
+		minValue,
+		maxValueSum,
+		minValueSum,
+	)
+	inputsList = append(inputsList, packedBallot)
+
 	inputsList = append(inputsList, pubX)
 	inputsList = append(inputsList, pubY)
-	
+
 	inputsList = append(inputsList, address)
 	inputsList = append(inputsList, voteID)
-	
+
 	for i := 0; i < nFields; i++ {
 		inputsList = append(inputsList, cipherfields[i][0][0])
 		inputsList = append(inputsList, cipherfields[i][0][1])
@@ -126,6 +162,7 @@ func BuildBallotVectors() (*BallotVectors, error) {
 		VoteID:         voteID,
 		InputsHash:     inputsHash,
 		NumFields:      numFields,
+		GroupSize:      groupSize,
 		UniqueValues:   uniqueValues,
 		MaxValue:       maxValue,
 		MinValue:       minValue,
@@ -133,29 +170,23 @@ func BuildBallotVectors() (*BallotVectors, error) {
 		MinValueSum:    minValueSum,
 		CostExponent:   costExponent,
 		CostFromWeight: costFromWeight,
+		PackedBallot:   packedBallot,
 	}, nil
 }
 
 // InputsMap returns the JSON-friendly map expected by snarkjs/ballot circuits.
 func (b *BallotVectors) InputsMap() map[string]any {
 	return map[string]any{
-		"fields":            b.Fields,
-		"weight":            b.Weight,
-		"encryption_pubkey": []string{b.PubKeyX.String(), b.PubKeyY.String()},
-		"cipherfields":      StringifyCipherfields(b.Cipherfields),
-		"process_id":        b.ProcessID.String(),
-		"address":           b.Address.String(),
-		"k":                 b.K.String(),
-		"vote_id":           b.VoteID.String(),
-		"inputs_hash":       b.InputsHash.String(),
-		"num_fields":        b.NumFields,
-		"unique_values":     b.UniqueValues,
-		"max_value":         b.MaxValue,
-		"min_value":         b.MinValue,
-		"max_value_sum":     b.MaxValueSum,
-		"min_value_sum":     b.MinValueSum,
-		"cost_exponent":     b.CostExponent,
-		"cost_from_weight":  b.CostFromWeight,
+		"fields":             b.Fields,
+		"weight":             b.Weight,
+		"encryption_pubkey":  []string{b.PubKeyX.String(), b.PubKeyY.String()},
+		"cipherfields":       StringifyCipherfields(b.Cipherfields),
+		"process_id":         b.ProcessID.String(),
+		"address":            b.Address.String(),
+		"k":                  b.K.String(),
+		"vote_id":            b.VoteID.String(),
+		"inputs_hash":        b.InputsHash.String(),
+		"packed_ballot_mode": b.PackedBallot.String(),
 	}
 }
 
