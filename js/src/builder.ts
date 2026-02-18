@@ -3,6 +3,8 @@ import { buildPoseidon } from 'circomlibjs';
 
 // BN254 scalar field modulus (Fr)
 export const FIELD_MODULUS = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const VOTE_ID_MIN = 0x8000000000000000n;
+const VOTE_ID_HASH_BITS = 63n;
 
 // Scaling factor for RTE <-> TE conversion
 // This is used to convert between Gnark's BabyJubJub (Reduced Twisted Edwards)
@@ -216,8 +218,9 @@ export class BallotBuilder {
         // Poseidon(3)
         const h = this.poseidon([BigInt(processId), BigInt(address), BigInt(k)]);
         const hBig = BigInt(this.F.toString(h, 10));
-        const mask = (1n << 160n) - 1n;
-        return (hBig & mask).toString();
+        // Match spec.VoteID: low 63 bits of hash plus VoteIDMin.
+        const mask = (1n << VOTE_ID_HASH_BITS) - 1n;
+        return ((hBig & mask) + VOTE_ID_MIN).toString();
     }
 
     computeInputsHash(inputs: any[]): string {

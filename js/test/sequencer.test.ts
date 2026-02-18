@@ -171,9 +171,11 @@ describe("Sequencer Test Data Integration", function () {
         console.log("  K:", k);
         console.log("  Vote ID:", voteId);
 
-        // Vote ID should be truncated to 160 bits (max value is 2^160 - 1)
-        const maxVoteId = (1n << 160n) - 1n;
-        expect(BigInt(voteId)).to.be.lessThanOrEqual(maxVoteId);
+        // Vote ID should match spec.VoteID format: [VoteIDMin, VoteIDMin + 2^63 - 1]
+        const voteIdMin = 0x8000000000000000n;
+        const voteIdMax = voteIdMin + ((1n << 63n) - 1n);
+        expect(BigInt(voteId)).to.be.greaterThanOrEqual(voteIdMin);
+        expect(BigInt(voteId)).to.be.lessThanOrEqual(voteIdMax);
 
         // Running the same computation should produce the same result
         const voteId2 = builder.computeVoteID(
