@@ -6,6 +6,35 @@ include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/escalarmulany.circom";
 include "circomlib/circuits/escalarmulfix.circom";
 
+template BabyCheckPrimeSubgroup() {
+    signal input x;
+    signal input y;
+
+    component onCurve = BabyCheck();
+    onCurve.x <== x;
+    onCurve.y <== y;
+
+    component orderBits = Num2Bits(253);
+    orderBits.in <== 2736030358979909402780800718157159386076813972158567259200215660948447373041;
+
+    component subgroupMul = EscalarMulAny(253);
+    subgroupMul.p[0] <== x;
+    subgroupMul.p[1] <== y;
+    for (var i = 0; i < 253; i++) {
+        orderBits.out[i] ==> subgroupMul.e[i];
+    }
+
+    component isIdentityX = IsZero();
+    isIdentityX.in <== subgroupMul.out[0];
+
+    component isIdentityY = IsEqual();
+    isIdentityY.in[0] <== subgroupMul.out[1];
+    isIdentityY.in[1] <== 1;
+
+    isIdentityX.out === 1;
+    isIdentityY.out === 1;
+}
+
 template ElGamal(msg_bits) {
     signal input encryption_pubkey[2]; // [pub] public key
     signal input msg;   // [priv] message to encrypt
@@ -14,10 +43,10 @@ template ElGamal(msg_bits) {
     signal output c1[2]; // first point of the ciphertext
     signal output c2[2]; // second point of the ciphertext
 
-    // ensure that public key is on the curve
-    component encryptionPubkeyCheck = BabyCheck();
-    encryptionPubkeyCheck.x <== encryption_pubkey[0];
-    encryptionPubkeyCheck.y <== encryption_pubkey[1];
+    // ensure that public key is on the curve and subgroup
+    component encryptionPubkeySubgroupCheck = BabyCheckPrimeSubgroup();
+    encryptionPubkeySubgroupCheck.x <== encryption_pubkey[0];
+    encryptionPubkeySubgroupCheck.y <== encryption_pubkey[1];
     // ensure that the public key is not the identity point (0, 1)
     component isz = IsZero();
     isz.in <== encryption_pubkey[0];
