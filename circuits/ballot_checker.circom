@@ -74,45 +74,62 @@ template BallotChecker(n_fields) {
     groupWithin.in[0] <== group_size;
     groupWithin.in[1] <== num_fields;
     groupWithin.out === 1;
+
     // all fields must be different
     component unique = UniqueArray(n_fields);
     unique.arr <== fields;
     unique.mask <== mask;
     unique.sel <== unique_values;
+
     // every field must be between min_value and max_value
     component inBounds = ArrayInBoundsBounded(n_fields, 48);
     inBounds.arr <== fields;
     inBounds.mask <== mask;
     inBounds.min <== min_value;
     inBounds.max <== max_value;
+
     // compute total cost: sum of all fields to the power of cost_exponent
-    signal total_cost;
+    signal value_sum;
     component sum_calc = SumPow(n_fields, 8);
     sum_calc.inputs <== fields;
     sum_calc.mask <== mask;
     sum_calc.exp <== cost_exponent;
-    total_cost <== sum_calc.out;
-    // if max_value_sum is 0, then the cost is not bounded
-    component hasMax = IsZero();
-    hasMax.in <== max_value_sum;
-    signal useMax;
-    useMax <== 1 - hasMax.out;
+    value_sum <== sum_calc.out;
+
+    // if max_value_sum is 0, it has not a max for the value sum
+    component noMaxValueSum = IsZero();
+    noMaxValueSum.in <== max_value_sum;
+
+    // check if the max bound should be used:
+    //  - if max_value_sum > 0 (noMaxValueSum == 1)
+    //  - or cost_from_weight == 1
+    component useMax = GreaterThan(128);
+    useMax.in[0] <== noMaxValueSum.out + cost_from_weight;
+    useMax.in[1] <== 0;
+
+
     // select max_value_sum if cost_from_weight is 0, otherwise use weight
-    component mux = Mux();
-    mux.a <== max_value_sum;
-    mux.b <== weight;
+    component finalMax = Mux();
+    finalMax.a <== max_value_sum;
+    finalMax.b <== weight;
     mux.sel <== cost_from_weight;
-    // check bounds of total_cost with min_value_sum and mux output
+
+    // check bounds:
+    //   min_value_sum <= value_sum <= (cost_from_weight or max_value_sum)
+
+    //  value_sum <= (cost_from_weight or max_value_sum)
     component lt = LessEqThan(128);
-    lt.in[0] <== total_cost;
+    lt.in[0] <== value_sum;
     lt.in[1] <== mux.out;
-    // lt.out === 1;
-    // only enforce when max_value_sum > 0
-    useMax * lt.out === useMax;
-    // encrease by 1 the total_cost to allow equality with min_value_sum and 
-    // avoid negative overflow decreasing min_value_sum
+
+    // only enforce max bound when max_value_sum > 0 or cost_from_weight == 1
+    useMax.out * lt.out === useMax.out;
+
+    // second: min_value_sum <= value_sum
     component gt = GreaterThan(128);
-    gt.in[0] <== total_cost + 1;
+    // encrease by 1 the value_sum to allow equality with min_value_sum and 
+    // avoid negative overflow decreasing min_value_sum
+    gt.in[0] <== value_sum + 1;
     gt.in[1] <== min_value_sum; 
     gt.out === 1;
 }
