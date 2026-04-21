@@ -10,8 +10,8 @@ import (
 	"github.com/vocdoni/davinci-circom/test/testutils"
 )
 
-// padToEight returns a slice of length 8, copying the caller‑supplied values
-// and zero‑filling the remainder (or truncating if more than 8).
+// padToEight returns a slice of length 8, copying the caller-supplied values
+// and zero-filling the remainder (or truncating if more than 8).
 func padToEight(vals []int64) []int64 {
 	out := make([]int64, 8)
 	copy(out, vals)
@@ -32,7 +32,7 @@ func TestBallotChecker(t *testing.T) {
 	c := qt.New(t)
 	type tc struct {
 		name           string
-		fields         []int64 // raw field values (<= 8 non‑zero entries)
+		fields         []int64 // raw field values (<= 8 non-zero entries)
 		maxCount       int     // logical field count provided by the ballot
 		forceUnique    bool    // uniqueness flag
 		maxValue       int
@@ -47,7 +47,7 @@ func TestBallotChecker(t *testing.T) {
 
 	cases := []tc{
 		{
-			name:        "Simple 5‑star rating – valid",
+			name:        "Simple 5-star rating - valid",
 			fields:      []int64{3, 2, 5},
 			maxCount:    3,
 			forceUnique: true,
@@ -59,7 +59,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  true,
 		},
 		{
-			name:        "Duplicate values with uniqueness required – invalid",
+			name:        "Duplicate values with uniqueness required - invalid",
 			fields:      []int64{3, 3, 1},
 			maxCount:    3,
 			forceUnique: true,
@@ -71,7 +71,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Maxvalue is correctly verified and maxValueSum=0 is ignored – valid",
+			name:        "Maxvalue is correctly verified and maxValueSum=0 is ignored - valid",
 			fields:      []int64{50, 49, 48},
 			maxCount:    3,
 			forceUnique: false,
@@ -83,7 +83,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  true,
 		},
 		{
-			name:        "Value exceeds maxValue – invalid",
+			name:        "Value exceeds maxValue - invalid",
 			fields:      []int64{13, 0, 0},
 			maxCount:    3,
 			forceUnique: false,
@@ -95,7 +95,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Value underflows minValue – invalid",
+			name:        "Value underflows minValue - invalid",
 			fields:      []int64{1, 0, 0},
 			maxCount:    3,
 			forceUnique: false,
@@ -107,7 +107,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Quadratic voting cost within limit – valid",
+			name:        "Quadratic voting cost within limit - valid",
 			fields:      []int64{2, 2, 2}, // cost = 4+4+4 = 12
 			maxCount:    3,
 			forceUnique: false,
@@ -119,7 +119,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  true,
 		},
 		{
-			name:        "Quadratic voting cost exceeds limit – invalid",
+			name:        "Quadratic voting cost exceeds limit - invalid",
 			fields:      []int64{3, 2, 1}, // cost = 9+4+1 = 14 > 13
 			maxCount:    3,
 			forceUnique: false,
@@ -131,7 +131,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "minValueSum not reached – invalid",
+			name:        "minValueSum not reached - invalid",
 			fields:      []int64{2, 0, 0}, // cost = 4 < 5
 			maxCount:    3,
 			forceUnique: false,
@@ -143,7 +143,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Duplicates allowed when uniqueness off – valid",
+			name:        "Duplicates allowed when uniqueness off - valid",
 			fields:      []int64{5, 5, 0},
 			maxCount:    3,
 			forceUnique: false,
@@ -155,7 +155,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  true,
 		},
 		{
-			name:        "Approval voting – exactly 3 of 6 chosen – valid",
+			name:        "Approval voting - exactly 3 of 6 chosen - valid",
 			fields:      []int64{1, 0, 1, 0, 1, 0},
 			maxCount:    6,
 			forceUnique: false,
@@ -167,7 +167,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  true,
 		},
 		{
-			name:        "Approval voting – choose 4 out of 6 (exceeds limit) – invalid",
+			name:        "Approval voting - choose 4 out of 6 (exceeds limit) - invalid",
 			fields:      []int64{1, 1, 1, 1, 0, 0}, // cost 4 > 3
 			maxCount:    6,
 			forceUnique: false,
@@ -179,7 +179,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Ranked‑choice voting – unique ranks 1..3 – valid",
+			name:        "Ranked-choice voting - unique ranks 1..3 - valid",
 			fields:      []int64{1, 2, 3}, // sum = 6
 			maxCount:    3,
 			forceUnique: true,
@@ -191,7 +191,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  true,
 		},
 		{
-			name:        "Ranked‑choice voting – duplicate rank – invalid",
+			name:        "Ranked-choice voting - duplicate rank - invalid",
 			fields:      []int64{1, 1, 2},
 			maxCount:    3,
 			forceUnique: true,
@@ -203,7 +203,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "All zeros but minValueSum positive – invalid",
+			name:        "All zeros but minValueSum positive - invalid",
 			fields:      []int64{0, 0, 0},
 			maxCount:    3,
 			forceUnique: false,
@@ -273,7 +273,7 @@ func TestBallotChecker(t *testing.T) {
 			// Pad or truncate the ballot to exactly eight positions.
 			padded := padToEight(tc.fields)
 
-			// Force‑uniqueness flag as string (circom expects 0/1, not bool).
+			// Force-uniqueness flag as string (circom expects 0/1, not bool).
 			uniq := "0"
 			if tc.forceUnique {
 				uniq = "1"

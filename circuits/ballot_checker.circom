@@ -63,6 +63,7 @@ template BallotChecker(n_fields) {
     signal input cost_exponent;
     signal input cost_from_weight;
     signal input weight;
+
     // return the mask of valid fields to be used in other components
     signal output mask[n_fields];
     component mask_gen = MaskGeneratorBounded(n_fields, 8);
@@ -99,12 +100,14 @@ template BallotChecker(n_fields) {
     // if max_value_sum is 0, it has not a max for the value sum
     component noMaxValueSum = IsZero();
     noMaxValueSum.in <== max_value_sum;
+    signal validMaxValueSum;
+    validMaxValueSum <== 1 - noMaxValueSum.out;
 
     // check if the max bound should be used:
-    //  - if max_value_sum > 0 (noMaxValueSum == 1)
+    //  - if max_value_sum > 0 (validMaxValueSum == 1)
     //  - or cost_from_weight == 1
     component useMax = GreaterThan(128);
-    useMax.in[0] <== noMaxValueSum.out + cost_from_weight;
+    useMax.in[0] <== validMaxValueSum + cost_from_weight;
     useMax.in[1] <== 0;
 
 
@@ -112,25 +115,25 @@ template BallotChecker(n_fields) {
     component finalMax = Mux();
     finalMax.a <== max_value_sum;
     finalMax.b <== weight;
-    mux.sel <== cost_from_weight;
+    finalMax.sel <== cost_from_weight;
 
     // check bounds:
     //   min_value_sum <= value_sum <= (cost_from_weight or max_value_sum)
 
     //  value_sum <= (cost_from_weight or max_value_sum)
-    component lt = LessEqThan(128);
-    lt.in[0] <== value_sum;
-    lt.in[1] <== mux.out;
+    component validValueForMax = LessEqThan(128);
+    validValueForMax.in[0] <== value_sum;
+    validValueForMax.in[1] <== finalMax.out;
 
     // only enforce max bound when max_value_sum > 0 or cost_from_weight == 1
-    useMax.out * lt.out === useMax.out;
+    useMax.out * validValueForMax.out === useMax.out;
 
     // second: min_value_sum <= value_sum
-    component gt = GreaterThan(128);
+    component validValueForMin = GreaterThan(128);
     // encrease by 1 the value_sum to allow equality with min_value_sum and 
     // avoid negative overflow decreasing min_value_sum
-    gt.in[0] <== value_sum + 1;
-    gt.in[1] <== min_value_sum; 
-    gt.out === 1;
+    validValueForMin.in[0] <== value_sum + 1;
+    validValueForMin.in[1] <== min_value_sum; 
+    validValueForMin.out === 1;
 }
 
