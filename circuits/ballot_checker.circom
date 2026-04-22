@@ -110,7 +110,8 @@ template BallotChecker(n_fields) {
     useMax.in[0] <== validMaxValueSum + cost_from_weight;
     useMax.in[1] <== 0;
 
-    // select max_value_sum if cost_from_weight is 0, otherwise use weight
+    // finalMax will be max_value_sum if cost_from_weight is 0, otherwise use 
+    // the weight
     component finalMax = Mux();
     finalMax.a <== max_value_sum;
     finalMax.b <== weight;

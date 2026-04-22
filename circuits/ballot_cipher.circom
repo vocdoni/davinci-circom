@@ -55,7 +55,7 @@ template BallotCipher(n_fields) {
     // provided ciphertexts. The result of the comparison is used to count the 
     // number of valid fields.
     for (var i = 0; i < n_fields; i++) {
-        ciphers[i] = ElGamal();
+        ciphers[i] = ElGamal(48);
         ciphers[i].encryption_pubkey <== encryption_pubkey;
         ciphers[i].msg <== fields[i];
         ciphers[i].k <== ks[i+1];

@@ -256,6 +256,20 @@ func TestBallotChecker(t *testing.T) {
 			costFromWeight: false,
 			weight:         50,
 		},
+		{
+			name:           "Exceed assigned weight but without reach max value sum - valid",
+			fields:         []int64{75, 0, 0, 0},
+			numFields:      4,
+			forceUnique:    false,
+			maxValue:       75,
+			minValue:       0,
+			maxValueSum:    75,
+			minValueSum:    0,
+			costExp:        1,
+			expectPass:     true,
+			costFromWeight: false,
+			weight:         50,
+		},
 	}
 
 	// Get artifact paths
