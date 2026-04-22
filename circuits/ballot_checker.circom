@@ -76,20 +76,20 @@ template BallotChecker(n_fields) {
     groupWithin.in[1] <== num_fields;
     groupWithin.out === 1;
 
-    // all fields must be different
-    component unique = UniqueArray(n_fields);
-    unique.arr <== fields;
-    unique.mask <== mask;
-    unique.sel <== unique_values;
+    // all fields must be different or not based on unique_values
+    component checkUniqueValues = UniqueArray(n_fields);
+    checkUniqueValues.arr <== fields;
+    checkUniqueValues.mask <== mask;
+    checkUniqueValues.sel <== unique_values;
 
     // every field must be between min_value and max_value
-    component inBounds = ArrayInBoundsBounded(n_fields, 48);
-    inBounds.arr <== fields;
-    inBounds.mask <== mask;
-    inBounds.min <== min_value;
-    inBounds.max <== max_value;
+    component fieldsInBounds = ArrayInBoundsBounded(n_fields, 48);
+    fieldsInBounds.arr <== fields;
+    fieldsInBounds.mask <== mask;
+    fieldsInBounds.min <== min_value;
+    fieldsInBounds.max <== max_value;
 
-    // compute total cost: sum of all fields to the power of cost_exponent
+    // compute value sum: sum of all fields to the power of cost_exponent
     signal value_sum;
     component sum_calc = SumPow(n_fields, 8);
     sum_calc.inputs <== fields;
@@ -106,10 +106,9 @@ template BallotChecker(n_fields) {
     // check if the max bound should be used:
     //  - if max_value_sum > 0 (validMaxValueSum == 1)
     //  - or cost_from_weight == 1
-    component useMax = GreaterThan(128);
+    component useMax = GreaterThan(2);
     useMax.in[0] <== validMaxValueSum + cost_from_weight;
     useMax.in[1] <== 0;
-
 
     // select max_value_sum if cost_from_weight is 0, otherwise use weight
     component finalMax = Mux();
@@ -128,7 +127,7 @@ template BallotChecker(n_fields) {
     // only enforce max bound when max_value_sum > 0 or cost_from_weight == 1
     useMax.out * validValueForMax.out === useMax.out;
 
-    // second: min_value_sum <= value_sum
+    // min_value_sum <= value_sum
     component validValueForMin = GreaterThan(128);
     // encrease by 1 the value_sum to allow equality with min_value_sum and 
     // avoid negative overflow decreasing min_value_sum

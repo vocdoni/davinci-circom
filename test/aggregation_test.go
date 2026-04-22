@@ -114,7 +114,7 @@ func TestCircomAggregation(t *testing.T) {
 	}
 
 	placeholderCircuit := &aggregationCircuit{VerifyingKey: placeholder.Vk}
-	for i := 0; i < numProofs; i++ {
+	for i := range numProofs {
 		placeholderCircuit.Proofs[i] = placeholder.Proof
 		// Public inputs are handled by type definition, empty initialization is fine for compile
 	}

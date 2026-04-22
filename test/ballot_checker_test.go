@@ -33,7 +33,7 @@ func TestBallotChecker(t *testing.T) {
 	type tc struct {
 		name           string
 		fields         []int64 // raw field values (<= 8 non-zero entries)
-		maxCount       int     // logical field count provided by the ballot
+		numFields      int     // logical field count provided by the ballot
 		forceUnique    bool    // uniqueness flag
 		maxValue       int
 		minValue       int
@@ -49,7 +49,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Simple 5-star rating - valid",
 			fields:      []int64{3, 2, 5},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: true,
 			maxValue:    5,
 			minValue:    0,
@@ -61,7 +61,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Duplicate values with uniqueness required - invalid",
 			fields:      []int64{3, 3, 1},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: true,
 			maxValue:    5,
 			minValue:    0,
@@ -73,7 +73,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Maxvalue is correctly verified and maxValueSum=0 is ignored - valid",
 			fields:      []int64{50, 49, 48},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    50,
 			minValue:    0,
@@ -85,7 +85,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Value exceeds maxValue - invalid",
 			fields:      []int64{13, 0, 0},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    12,
 			minValue:    0,
@@ -97,7 +97,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Value underflows minValue - invalid",
 			fields:      []int64{1, 0, 0},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    11,
 			minValue:    5,
@@ -109,7 +109,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Quadratic voting cost within limit - valid",
 			fields:      []int64{2, 2, 2}, // cost = 4+4+4 = 12
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    4,
 			minValue:    0,
@@ -121,7 +121,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Quadratic voting cost exceeds limit - invalid",
 			fields:      []int64{3, 2, 1}, // cost = 9+4+1 = 14 > 13
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    4,
 			minValue:    0,
@@ -133,7 +133,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "minValueSum not reached - invalid",
 			fields:      []int64{2, 0, 0}, // cost = 4 < 5
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    4,
 			minValue:    0,
@@ -145,7 +145,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Duplicates allowed when uniqueness off - valid",
 			fields:      []int64{5, 5, 0},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    5,
 			minValue:    0,
@@ -157,7 +157,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Approval voting - exactly 3 of 6 chosen - valid",
 			fields:      []int64{1, 0, 1, 0, 1, 0},
-			maxCount:    6,
+			numFields:   6,
 			forceUnique: false,
 			maxValue:    1,
 			minValue:    0,
@@ -169,7 +169,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Approval voting - choose 4 out of 6 (exceeds limit) - invalid",
 			fields:      []int64{1, 1, 1, 1, 0, 0}, // cost 4 > 3
-			maxCount:    6,
+			numFields:   6,
 			forceUnique: false,
 			maxValue:    1,
 			minValue:    0,
@@ -181,7 +181,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Ranked-choice voting - unique ranks 1..3 - valid",
 			fields:      []int64{1, 2, 3}, // sum = 6
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: true,
 			maxValue:    3,
 			minValue:    1,
@@ -193,7 +193,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "Ranked-choice voting - duplicate rank - invalid",
 			fields:      []int64{1, 1, 2},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: true,
 			maxValue:    3,
 			minValue:    1,
@@ -205,7 +205,7 @@ func TestBallotChecker(t *testing.T) {
 		{
 			name:        "All zeros but minValueSum positive - invalid",
 			fields:      []int64{0, 0, 0},
-			maxCount:    3,
+			numFields:   3,
 			forceUnique: false,
 			maxValue:    5,
 			minValue:    0,
@@ -215,9 +215,9 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:           "Edge case",
+			name:           "Exceed asigned weight - invalid",
 			fields:         []int64{25, 0, 0, 0},
-			maxCount:       4,
+			numFields:      4,
 			forceUnique:    false,
 			maxValue:       50,
 			minValue:       0,
@@ -229,9 +229,9 @@ func TestBallotChecker(t *testing.T) {
 			weight:         10,
 		},
 		{
-			name:           "Edge case 2",
+			name:           "Less value than assigned weight - valid",
 			fields:         []int64{25, 0, 0, 0},
-			maxCount:       4,
+			numFields:      4,
 			forceUnique:    false,
 			maxValue:       50,
 			minValue:       0,
@@ -243,9 +243,9 @@ func TestBallotChecker(t *testing.T) {
 			weight:         50,
 		},
 		{
-			name:           "Edge case 3",
+			name:           "Exceed assigned weight but without max value sum - valid",
 			fields:         []int64{75, 0, 0, 0},
-			maxCount:       4,
+			numFields:      4,
 			forceUnique:    false,
 			maxValue:       75,
 			minValue:       0,
@@ -285,8 +285,8 @@ func TestBallotChecker(t *testing.T) {
 
 			inputs := map[string]any{
 				"fields":           ballotToStrings(padded),
-				"num_fields":       strconv.Itoa(tc.maxCount),
-				"group_size":       strconv.Itoa(tc.maxCount),
+				"num_fields":       strconv.Itoa(tc.numFields),
+				"group_size":       strconv.Itoa(tc.numFields),
 				"unique_values":    uniq,
 				"max_value":        strconv.Itoa(tc.maxValue),
 				"min_value":        strconv.Itoa(tc.minValue),
@@ -303,24 +303,14 @@ func TestBallotChecker(t *testing.T) {
 			c.Logf("\n[%s] Inputs:\n%s\n", tc.name, string(bInputs))
 
 			proofData, pubSignals, err := testutils.CompileAndGenerateProof(bInputs, wasmPath, zkeyPath)
+			c.Assert(tc.expectPass, qt.Equals, err == nil)
 
-			if tc.expectPass {
-				// Expect success in both proof generation and verification.
-				c.Assert(err, qt.IsNil)
-
+			// Failure is acceptable at either stage for negative tests.
+			if tc.expectPass || err == nil {
 				vkey, err := os.ReadFile(vkeyPath)
 				c.Assert(err, qt.IsNil)
-
 				err = testutils.VerifyProof(proofData, pubSignals, vkey)
-				c.Assert(err, qt.IsNil)
-			} else {
-				// Failure is acceptable at either stage for negative tests.
-				if err == nil {
-					vkey, err2 := os.ReadFile(vkeyPath)
-					c.Assert(err2, qt.IsNil)
-					err = testutils.VerifyProof(proofData, pubSignals, vkey)
-				}
-				c.Assert(err, qt.Not(qt.IsNil))
+				c.Assert(tc.expectPass, qt.Equals, err == nil)
 			}
 		})
 	}
