@@ -28,21 +28,20 @@ func ballotToStrings(vals []int64) []string {
 	return out
 }
 
-func TestBallotChecker(t *testing.T) {
+func TestCheckBallotMode(t *testing.T) {
 	c := qt.New(t)
 	type tc struct {
-		name           string
-		fields         []int64 // raw field values (<= 8 non-zero entries)
-		numFields      int     // logical field count provided by the ballot
-		forceUnique    bool    // uniqueness flag
-		maxValue       int
-		minValue       int
-		maxValueSum    int
-		minValueSum    int
-		costExp        int
-		expectPass     bool
-		costFromWeight bool
-		weight         int
+		name        string
+		fields      []int64 // raw field values (<= 8 non-zero entries)
+		numFields   int     // logical field count provided by the ballot
+		forceUnique bool    // uniqueness flag
+		maxValue    int
+		minValue    int
+		maxValueSum int
+		minValueSum int
+		costExp     int
+		expectPass  bool
+		weight      int
 	}
 
 	cases := []tc{
@@ -71,7 +70,7 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Maxvalue is correctly verified and maxValueSum=0 is ignored - valid",
+			name:        "Maxvalue is correctly verified and maxValueSum=0 is ignored using weight - valid",
 			fields:      []int64{50, 49, 48},
 			numFields:   3,
 			forceUnique: false,
@@ -80,6 +79,7 @@ func TestBallotChecker(t *testing.T) {
 			maxValueSum: 0,
 			minValueSum: 0,
 			costExp:     1,
+			weight:      50 + 49 + 48,
 			expectPass:  true,
 		},
 		{
@@ -215,60 +215,43 @@ func TestBallotChecker(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:           "Exceed asigned weight - invalid",
-			fields:         []int64{25, 0, 0, 0},
-			numFields:      4,
-			forceUnique:    false,
-			maxValue:       50,
-			minValue:       0,
-			maxValueSum:    0,
-			minValueSum:    0,
-			costExp:        1,
-			expectPass:     false,
-			costFromWeight: true,
-			weight:         10,
+			name:        "Exceed asigned weight - invalid",
+			fields:      []int64{25, 0, 0, 0},
+			numFields:   4,
+			forceUnique: false,
+			maxValue:    50,
+			minValue:    0,
+			maxValueSum: 0,
+			minValueSum: 0,
+			costExp:     1,
+			expectPass:  false,
+			weight:      10,
 		},
 		{
-			name:           "Less value than assigned weight - valid",
-			fields:         []int64{25, 0, 0, 0},
-			numFields:      4,
-			forceUnique:    false,
-			maxValue:       50,
-			minValue:       0,
-			maxValueSum:    0,
-			minValueSum:    0,
-			costExp:        1,
-			expectPass:     true,
-			costFromWeight: true,
-			weight:         50,
+			name:        "Less value than assigned weight - valid",
+			fields:      []int64{25, 0, 0, 0},
+			numFields:   4,
+			forceUnique: false,
+			maxValue:    50,
+			minValue:    0,
+			maxValueSum: 0,
+			minValueSum: 0,
+			costExp:     1,
+			expectPass:  true,
+			weight:      50,
 		},
 		{
-			name:           "Exceed assigned weight but without max value sum - valid",
-			fields:         []int64{75, 0, 0, 0},
-			numFields:      4,
-			forceUnique:    false,
-			maxValue:       75,
-			minValue:       0,
-			maxValueSum:    0,
-			minValueSum:    0,
-			costExp:        1,
-			expectPass:     true,
-			costFromWeight: false,
-			weight:         50,
-		},
-		{
-			name:           "Exceed assigned weight but without reach max value sum - valid",
-			fields:         []int64{75, 0, 0, 0},
-			numFields:      4,
-			forceUnique:    false,
-			maxValue:       75,
-			minValue:       0,
-			maxValueSum:    75,
-			minValueSum:    0,
-			costExp:        1,
-			expectPass:     true,
-			costFromWeight: false,
-			weight:         50,
+			name:        "Exceed assigned weight but without max value sum - invalid",
+			fields:      []int64{75, 0, 0, 0},
+			numFields:   4,
+			forceUnique: false,
+			maxValue:    75,
+			minValue:    0,
+			maxValueSum: 0,
+			minValueSum: 0,
+			costExp:     1,
+			expectPass:  false,
+			weight:      50,
 		},
 	}
 
@@ -292,23 +275,18 @@ func TestBallotChecker(t *testing.T) {
 			if tc.forceUnique {
 				uniq = "1"
 			}
-			costFromWeight := "0"
-			if tc.costFromWeight {
-				costFromWeight = "1"
-			}
 
 			inputs := map[string]any{
-				"fields":           ballotToStrings(padded),
-				"num_fields":       strconv.Itoa(tc.numFields),
-				"group_size":       strconv.Itoa(tc.numFields),
-				"unique_values":    uniq,
-				"max_value":        strconv.Itoa(tc.maxValue),
-				"min_value":        strconv.Itoa(tc.minValue),
-				"max_value_sum":    strconv.Itoa(tc.maxValueSum),
-				"min_value_sum":    strconv.Itoa(tc.minValueSum),
-				"cost_exponent":    strconv.Itoa(tc.costExp),
-				"weight":           strconv.Itoa(tc.weight),
-				"cost_from_weight": costFromWeight,
+				"fields":        ballotToStrings(padded),
+				"num_fields":    strconv.Itoa(tc.numFields),
+				"group_size":    strconv.Itoa(tc.numFields),
+				"unique_values": uniq,
+				"max_value":     strconv.Itoa(tc.maxValue),
+				"min_value":     strconv.Itoa(tc.minValue),
+				"max_value_sum": strconv.Itoa(tc.maxValueSum),
+				"min_value_sum": strconv.Itoa(tc.minValueSum),
+				"cost_exponent": strconv.Itoa(tc.costExp),
+				"weight":        strconv.Itoa(tc.weight),
 			}
 
 			bInputs, err := json.MarshalIndent(inputs, "  ", "  ")

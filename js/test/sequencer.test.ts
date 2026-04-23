@@ -174,8 +174,9 @@ describe("Sequencer Test Data Integration", function () {
         // Vote ID should match spec.VoteID format: [VoteIDMin, VoteIDMin + 2^63 - 1]
         const voteIdMin = 0x8000000000000000n;
         const voteIdMax = voteIdMin + ((1n << 63n) - 1n);
-        expect(BigInt(voteId)).to.be.greaterThanOrEqual(voteIdMin);
-        expect(BigInt(voteId)).to.be.lessThanOrEqual(voteIdMax);
+        const voteIdBigInt = BigInt(voteId);
+        expect(voteIdBigInt >= voteIdMin).to.be.true;
+        expect(voteIdBigInt <= voteIdMax).to.be.true;
 
         // Running the same computation should produce the same result
         const voteId2 = builder.computeVoteID(
@@ -211,7 +212,7 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: 6,
             minValueSum: 0,
             costExponent: 0,
-            costFromWeight: 0,
+            // costFromWeight: 0,
         };
 
         const fields = [1, 2];
@@ -294,7 +295,7 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: 6,
             minValueSum: 0,
             costExponent: 0,
-            costFromWeight: 0,
+            // costFromWeight: 0,
         };
 
         const fields = [1, 2];
@@ -369,7 +370,7 @@ describe("Sequencer Test Data Integration", function () {
                 maxValueSum: "6",
                 minValueSum: "0",
                 costExponent: 0,
-                costFromWeight: false,
+                // costFromWeight: false,
             },
         };
 
@@ -442,7 +443,7 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: 6,
             minValueSum: 0,
             costExponent: 0,
-            costFromWeight: 0,
+            // costFromWeight: 0,
         };
 
         const inputs = builder.generateInputs(

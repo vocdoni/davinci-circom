@@ -27,7 +27,6 @@ function App() {
     maxValueSum: 1125,
     minValueSum: 5,
     costExponent: 2,
-    costFromWeight: 0
   });
 
   const addLog = (msg, type = 'info') => {
@@ -247,22 +246,15 @@ function App() {
                   <label className="form-label">Cost Exponent</label>
                   <input type="number" className="form-control" value={config.costExponent} onChange={e => setConfig({...config, costExponent: parseInt(e.target.value)})} />
                 </div>
-                <div className="col-6 col-md-3">
+                <div className="col-6 col-md-4">
                   <label className="form-label">Max Value Sum</label>
                   <input type="number" className="form-control" value={config.maxValueSum} onChange={e => setConfig({...config, maxValueSum: parseInt(e.target.value)})} />
                 </div>
-                <div className="col-6 col-md-3">
+                <div className="col-6 col-md-4">
                   <label className="form-label">Min Value Sum</label>
                   <input type="number" className="form-control" value={config.minValueSum} onChange={e => setConfig({...config, minValueSum: parseInt(e.target.value)})} />
                 </div>
-                <div className="col-6 col-md-3">
-                  <label className="form-label">Cost From Weight</label>
-                  <select className="form-select" value={config.costFromWeight} onChange={e => setConfig({...config, costFromWeight: parseInt(e.target.value)})}>
-                    <option value="0">Disabled (0)</option>
-                    <option value="1">Enabled (1)</option>
-                  </select>
-                </div>
-                <div className="col-6 col-md-3">
+                <div className="col-6 col-md-4">
                   <label className="form-label">Capacity</label>
                   <input type="text" className="form-control" value="8 (Fixed)" disabled />
                 </div>

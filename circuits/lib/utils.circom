@@ -39,9 +39,9 @@ template UniqueArray(n) {
 }
 
 // Ensures that every active element of arr lies in the inclusive interval [min, max].
-template ArrayInBounds(n) {
+template ArrayInBounds(n, value_bits) {
     signal input arr[n];
-    signal input mask[n]; // if mask[i] is 1, then enforce bounds, otherwise do nothing
+    signal input mask[n];
     signal input min;
     signal input max;
 
@@ -49,30 +49,30 @@ template ArrayInBounds(n) {
     component gt[n];
     for (var i = 0; i < n; i++) {
         // enforce each element is in bounds
-        lt[i] = GreaterThan(252);
+        lt[i] = GreaterThan(value_bits);
         lt[i].in[0] <== arr[i];
         lt[i].in[1] <== max;           // inclusive upper bound
         lt[i].out * mask[i] === 0;
 
-        gt[i] = LessThan(252);
+        gt[i] = LessThan(value_bits);
         gt[i].in[0] <== arr[i];
         gt[i].in[1] <== min;           // inclusive lower bound
         gt[i].out * mask[i] === 0;
     }
 }
 
-template MaskGenerator(n) {
+template MaskGenerator(n, n_bits) {
     signal input in;
     signal output out[n];
 
-    component control = LessThan(252);
+    component control = LessThan(n_bits);
     control.in[0] <== in;
     control.in[1] <== n + 1;
     assert(control.out == 1);
 
     component lt[n];
     for (var i = 0; i < n; i++) {
-        lt[i] = LessThan(252);
+        lt[i] = LessThan(n_bits);
         lt[i].in[0] <== i;
         lt[i].in[1] <== in;
         out[i] <== lt[i].out;
