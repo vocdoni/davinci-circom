@@ -15,10 +15,10 @@ const (
 	BallotProofVkey = "ballot_proof_vkey.json"
 	BallotProofR1CS = "ballot_proof.r1cs"
 
-	// Ballot Checker
-	BallotCheckerWasm = "ballot_checker_test.wasm"
-	BallotCheckerZkey = "ballot_checker_test_pkey.zkey"
-	BallotCheckerVkey = "ballot_checker_test_vkey.json"
+	// Ballot Protocol
+	BallotProtocolWasm = "ballot_protocol_test.wasm"
+	BallotProtocolZkey = "ballot_protocol_test_pkey.zkey"
+	BallotProtocolVkey = "ballot_protocol_test_vkey.json"
 
 	// Ballot Cipher
 	BallotCipherWasm = "ballot_cipher_test.wasm"

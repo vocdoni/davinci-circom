@@ -256,11 +256,11 @@ func TestCheckBallotMode(t *testing.T) {
 	}
 
 	// Get artifact paths
-	wasmPath, err := testutils.GetArtifactPath(testutils.BallotCheckerWasm)
+	wasmPath, err := testutils.GetArtifactPath(testutils.BallotProtocolWasm)
 	c.Assert(err, qt.IsNil)
-	zkeyPath, err := testutils.GetArtifactPath(testutils.BallotCheckerZkey)
+	zkeyPath, err := testutils.GetArtifactPath(testutils.BallotProtocolZkey)
 	c.Assert(err, qt.IsNil)
-	vkeyPath, err := testutils.GetArtifactPath(testutils.BallotCheckerVkey)
+	vkeyPath, err := testutils.GetArtifactPath(testutils.BallotProtocolVkey)
 	c.Assert(err, qt.IsNil)
 
 	for _, tc := range cases {

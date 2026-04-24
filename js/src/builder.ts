@@ -234,12 +234,11 @@ export class BallotBuilder {
         packed |= BigInt(config.numFields);
         packed |= BigInt(groupSize) << 8n;
         packed |= BigInt(config.uniqueValues) << 16n;
-        packed |= BigInt(config.costFromWeight ?? 0) << 17n;
-        packed |= BigInt(config.costExponent) << 18n;
-        packed |= BigInt(config.maxValue) << 26n;
-        packed |= BigInt(config.minValue) << 74n;
-        packed |= BigInt(config.maxValueSum) << 122n;
-        packed |= BigInt(config.minValueSum) << 185n;
+        packed |= BigInt(config.costExponent) << 17n;
+        packed |= BigInt(config.maxValue) << 25n;
+        packed |= BigInt(config.minValue) << 73n;
+        packed |= BigInt(config.maxValueSum) << 121n;
+        packed |= BigInt(config.minValueSum) << 184n;
         return packed;
     }
 
