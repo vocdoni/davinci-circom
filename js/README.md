@@ -74,7 +74,6 @@ const sequencerData: SequencerProcessData = {
         maxValueSum: "6",
         minValueSum: "0",
         costExponent: 0,
-        costFromWeight: false,
     }
 };
 
@@ -122,7 +121,6 @@ const inputs = builder.generateInputs(
         maxValueSum: 6,
         minValueSum: 0,
         costExponent: 0,
-        costFromWeight: 0,
     }
 );
 ```
@@ -260,7 +258,6 @@ interface SequencerProcessData {
         maxValueSum: string;
         minValueSum: string;
         costExponent: number;
-        costFromWeight: boolean;
     };
 }
 ```
@@ -279,7 +276,6 @@ interface BallotConfig {
     maxValueSum: number;
     minValueSum: number;
     costExponent: number;
-    costFromWeight: number; // 0 or 1
 }
 ```
 
@@ -310,7 +306,6 @@ async function generateBallotProof() {
             maxValueSum: "6",
             minValueSum: "0",
             costExponent: 0,
-            costFromWeight: false,
         }
     };
 

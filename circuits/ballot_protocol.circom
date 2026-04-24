@@ -18,8 +18,8 @@ function MinValueSumBits() { return 63; }
 
 // UnpackBallotMode template receives a single signal with the packed Ballot 
 // Mode in 248 bits. It returns the following decoded signals:
-//   - NumFields: 8 bits - max 255 (practical max: 8)
-//   - GroupSize: 8 bits - max 255 (practical max: 8)
+//   - NumFields: 8 bits - max 255
+//   - GroupSize: 8 bits - max 255
 //   - UniqueValues: 1 bit (true or false)
 //   - CostExponent: 8 bits - max 255
 //   - MaxValue: 48 bits - max 281474976710655
@@ -184,10 +184,8 @@ template CheckBallotMode(n_fields) {
     validValueForMax.out === 1;
 
     // check lower bound: min_value_sum <= value_sum
-    component validValueForMin = GreaterThan(MinValueSumBits());
-    // encrease by 1 the value_sum to allow equality with min_value_sum and 
-    // avoid negative overflow decreasing min_value_sum
-    validValueForMin.in[0] <== value_sum + 1;
-    validValueForMin.in[1] <== min_value_sum; 
+    component validValueForMin = LessEqThan(MinValueSumBits());
+    validValueForMin.in[0] <== min_value_sum;
+    validValueForMin.in[1] <== value_sum; 
     validValueForMin.out === 1;
 }

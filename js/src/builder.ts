@@ -74,7 +74,6 @@ export interface BallotConfig {
     maxValueSum: number;
     minValueSum: number;
     costExponent: number;
-    costFromWeight?: number;
 }
 
 /**
@@ -95,7 +94,6 @@ export interface SequencerProcessData {
         maxValueSum: string;
         minValueSum: string;
         costExponent: number;
-        costFromWeight?: boolean;
     };
 }
 
@@ -120,7 +118,6 @@ export function parseBallotMode(ballotMode: SequencerProcessData['ballotMode']):
         maxValueSum: parseInt(ballotMode.maxValueSum),
         minValueSum: parseInt(ballotMode.minValueSum),
         costExponent: ballotMode.costExponent,
-        costFromWeight: ballotMode.costFromWeight ? 1 : 0,
     };
 }
 

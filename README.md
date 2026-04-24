@@ -23,12 +23,11 @@ To reduce on-chain hashing costs, ballot mode can be serialized into a single BN
 | 0..7 | 8 | `numFields` | `< 2^8` |
 | 8..15 | 8 | `groupSize` | `< 2^8`, `<= numFields` |
 | 16 | 1 | `uniqueValues` | `0/1` |
-| 17 | 1 | `costFromWeight` | `0/1` |
-| 18..25 | 8 | `costExponent` | `< 2^8` |
-| 26..73 | 48 | `maxValue` | `< 2^48` |
-| 74..121 | 48 | `minValue` | `< 2^48` |
-| 122..184 | 63 | `maxValueSum` | `< 2^63` |
-| 185..247 | 63 | `minValueSum` | `< 2^63` |
+| 17..24 | 8 | `costExponent` | `< 2^8` |
+| 25..72 | 48 | `maxValue` | `< 2^48` |
+| 73..120 | 48 | `minValue` | `< 2^48` |
+| 121..183 | 63 | `maxValueSum` | `< 2^63` |
+| 184..246 | 63 | `minValueSum` | `< 2^63` |
 
 ### Packing Formula
 
@@ -37,12 +36,11 @@ packed =
     numFields
   | (groupSize << 8)
   | (uniqueValues << 16)
-  | (costFromWeight << 17)
-  | (costExponent << 18)
-  | (maxValue << 26)
-  | (minValue << 74)
-  | (maxValueSum << 122)
-  | (minValueSum << 185)
+  | (costExponent << 17)
+  | (maxValue << 25)
+  | (minValue << 73)
+  | (maxValueSum << 121)
+  | (minValueSum << 184)
 ```
 
 Any value that exceeds its bit width makes the serialization invalid.
