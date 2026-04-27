@@ -85,7 +85,7 @@ func TestCheckBallotMode(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Maxvalue is correctly verified and maxValueSum=0 is ignored using weight - valid",
+			name:        "maxValue is correctly verified and maxValueSum=0 is ignored using weight - valid",
 			fields:      []int64{50, 49, 48},
 			numFields:   3,
 			forceUnique: false,
@@ -230,7 +230,7 @@ func TestCheckBallotMode(t *testing.T) {
 			expectPass:  false,
 		},
 		{
-			name:        "Exceed asigned weight - invalid",
+			name:        "Exceed assigned weight - invalid",
 			fields:      []int64{25, 0, 0, 0},
 			numFields:   4,
 			forceUnique: false,
