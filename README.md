@@ -10,7 +10,7 @@ The circuits are optimized for the **BN254** curve and use **Poseidon** for hash
 
 ## BallotMode Packed Serialization (State Root)
 
-To reduce on-chain hashing costs, ballot mode can be serialized into a single BN254 field element (248 bits / 31 bytes) and used directly as the ballot-mode leaf value (no extra Poseidon hash). This packed representation is only used for the **state root** leaf; the ballot protocol still consumes the full ballot mode fields directly.
+To reduce on-chain hashing costs, ballot mode can be serialized into a single BN254 field element (247 bits / less than 31 bytes) and used directly as the ballot-mode leaf value (no extra Poseidon hash). This packed representation is only used for the **state root** leaf; the ballot protocol still consumes the full ballot mode fields directly.
 
 ### Fields
 

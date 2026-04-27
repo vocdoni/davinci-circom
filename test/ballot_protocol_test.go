@@ -3,6 +3,8 @@ package test
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -26,6 +28,19 @@ func ballotToStrings(vals []int64) []string {
 		out[i] = strconv.FormatInt(v, 10)
 	}
 	return out
+}
+
+func TestPackedBallotModeWidthMatchesLayout(t *testing.T) {
+	c := qt.New(t)
+
+	circomPath := filepath.Join("..", "circuits", "ballot_protocol.circom")
+	source, err := os.ReadFile(circomPath)
+	c.Assert(err, qt.IsNil)
+
+	re := regexp.MustCompile(`function PackedBallotModeBits\(\) \{ return (\d+); \}`)
+	match := re.FindSubmatch(source)
+	c.Assert(match, qt.HasLen, 2)
+	c.Assert(string(match[1]), qt.Equals, "247")
 }
 
 func TestCheckBallotMode(t *testing.T) {

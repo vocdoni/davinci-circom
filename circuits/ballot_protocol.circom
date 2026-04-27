@@ -6,7 +6,7 @@ include "circomlib/circuits/comparators.circom";
 include "./lib/math.circom";
 include "./lib/utils.circom";
 
-function PackedBallotModeBits() { return 248; }
+function PackedBallotModeBits() { return 247; }
 function NumFieldsBits() { return 8; }
 function GroupSizeBits() { return 8; }
 function UniqueValuesBits() { return 1; }
@@ -17,7 +17,7 @@ function MaxValueSumBits() { return 63; }
 function MinValueSumBits() { return 63; }
 
 // UnpackBallotMode template receives a single signal with the packed Ballot 
-// Mode in 248 bits. It returns the following decoded signals:
+// Mode in 247 bits. It returns the following decoded signals:
 //   - NumFields: 8 bits - max 255
 //   - GroupSize: 8 bits - max 255
 //   - UniqueValues: 1 bit (true or false)
