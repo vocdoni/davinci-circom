@@ -40,7 +40,6 @@ describe("Integration: Poseidon + ElGamal", function () {
             maxValueSum: 1125,
             minValueSum: 5,
             costExponent: 2,
-            costFromWeight: 0
         };
         const fields = [1, 2, 3, 4, 5];
         const { pubKey } = builder.elgamal.generateKeyPair();

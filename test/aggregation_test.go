@@ -27,7 +27,7 @@ const (
 // aggregationCircuit verifies numProofs BN254 Groth16 proofs inside BN254.
 type aggregationCircuit struct {
 	Proofs       [numProofs]stdgroth16.Proof[sw_bn254.G1Affine, sw_bn254.G2Affine]
-	PublicInputs [numProofs][3]emulated.Element[sw_bn254.ScalarField]                                `gnark:",public"`
+	PublicInputs [numProofs][3]emulated.Element[sw_bn254.ScalarField]                         `gnark:",public"`
 	VerifyingKey stdgroth16.VerifyingKey[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl] `gnark:"-"`
 }
 
@@ -114,7 +114,7 @@ func TestCircomAggregation(t *testing.T) {
 	}
 
 	placeholderCircuit := &aggregationCircuit{VerifyingKey: placeholder.Vk}
-	for i := 0; i < numProofs; i++ {
+	for i := range numProofs {
 		placeholderCircuit.Proofs[i] = placeholder.Proof
 		// Public inputs are handled by type definition, empty initialization is fine for compile
 	}

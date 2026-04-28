@@ -1,5 +1,6 @@
 import { buildElGamal, ElGamal } from './elgamal.js';
 import { buildPoseidon } from 'circomlibjs';
+import type { CircuitSignals } from 'snarkjs';
 
 // BN254 scalar field modulus (Fr)
 export const FIELD_MODULUS = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
@@ -73,7 +74,6 @@ export interface BallotConfig {
     maxValueSum: number;
     minValueSum: number;
     costExponent: number;
-    costFromWeight: number;
 }
 
 /**
@@ -94,7 +94,6 @@ export interface SequencerProcessData {
         maxValueSum: string;
         minValueSum: string;
         costExponent: number;
-        costFromWeight: boolean;
     };
 }
 
@@ -119,11 +118,10 @@ export function parseBallotMode(ballotMode: SequencerProcessData['ballotMode']):
         maxValueSum: parseInt(ballotMode.maxValueSum),
         minValueSum: parseInt(ballotMode.minValueSum),
         costExponent: ballotMode.costExponent,
-        costFromWeight: ballotMode.costFromWeight ? 1 : 0,
     };
 }
 
-export interface BallotInputs {
+export interface BallotInputs extends CircuitSignals {
     fields: number[];
     weight: number;
     encryption_pubkey: string[];
@@ -233,12 +231,11 @@ export class BallotBuilder {
         packed |= BigInt(config.numFields);
         packed |= BigInt(groupSize) << 8n;
         packed |= BigInt(config.uniqueValues) << 16n;
-        packed |= BigInt(config.costFromWeight) << 17n;
-        packed |= BigInt(config.costExponent) << 18n;
-        packed |= BigInt(config.maxValue) << 26n;
-        packed |= BigInt(config.minValue) << 74n;
-        packed |= BigInt(config.maxValueSum) << 122n;
-        packed |= BigInt(config.minValueSum) << 185n;
+        packed |= BigInt(config.costExponent) << 17n;
+        packed |= BigInt(config.maxValue) << 25n;
+        packed |= BigInt(config.minValue) << 73n;
+        packed |= BigInt(config.maxValueSum) << 121n;
+        packed |= BigInt(config.minValueSum) << 184n;
         return packed;
     }
 

@@ -2,6 +2,9 @@ pragma circom 2.1.0;
 
 include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/poseidon.circom";
+
+include "ballot_protocol.circom";
+
 include "./lib/elgamal.circom";
 
 template FieldComparator() {
@@ -55,7 +58,7 @@ template BallotCipher(n_fields) {
     // provided ciphertexts. The result of the comparison is used to count the 
     // number of valid fields.
     for (var i = 0; i < n_fields; i++) {
-        ciphers[i] = ElGamal();
+        ciphers[i] = ElGamal(MaxValueBits());
         ciphers[i].encryption_pubkey <== encryption_pubkey;
         ciphers[i].msg <== fields[i];
         ciphers[i].k <== ks[i+1];

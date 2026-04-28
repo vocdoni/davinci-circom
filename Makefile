@@ -1,4 +1,4 @@
-.PHONY: all prepare test test-js webapp static-webapp help
+.PHONY: all prepare test test-js js-test webapp static-webapp help
 
 all: prepare test ## Prepare circuits and run all tests
 
@@ -6,7 +6,7 @@ prepare: ## Compile default circuits and install tools
 	./prepare-circuit.sh
 
 test: prepare ## Run all tests (Go tests)
-	./prepare-circuit.sh test/ballot_checker_test.circom
+	./prepare-circuit.sh test/ballot_protocol_test.circom
 	./prepare-circuit.sh test/ballot_cipher_test.circom
 	go test -v ./test/...
 

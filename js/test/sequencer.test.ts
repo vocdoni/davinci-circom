@@ -42,7 +42,6 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: "6",
             minValueSum: "0",
             costExponent: 0,
-            costFromWeight: false,
         },
         censusRoot: "0x1e19f7dcef65ae548cd50d4abc068acb71e6b71e4f70149ebf02a95f7c907440",
         stateRoot: "0x23068329c92c67b356254dccb053af973af7c7883f3886cbe812d9399a924563",
@@ -109,7 +108,6 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: parseInt(sequencerData.ballotMode.maxValueSum),
             minValueSum: parseInt(sequencerData.ballotMode.minValueSum),
             costExponent: sequencerData.ballotMode.costExponent,
-            costFromWeight: sequencerData.ballotMode.costFromWeight ? 1 : 0,
         };
 
         // Sample vote values (must satisfy ballot mode constraints)
@@ -174,8 +172,9 @@ describe("Sequencer Test Data Integration", function () {
         // Vote ID should match spec.VoteID format: [VoteIDMin, VoteIDMin + 2^63 - 1]
         const voteIdMin = 0x8000000000000000n;
         const voteIdMax = voteIdMin + ((1n << 63n) - 1n);
-        expect(BigInt(voteId)).to.be.greaterThanOrEqual(voteIdMin);
-        expect(BigInt(voteId)).to.be.lessThanOrEqual(voteIdMax);
+        const voteIdBigInt = BigInt(voteId);
+        expect(voteIdBigInt >= voteIdMin).to.be.true;
+        expect(voteIdBigInt <= voteIdMax).to.be.true;
 
         // Running the same computation should produce the same result
         const voteId2 = builder.computeVoteID(
@@ -211,7 +210,6 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: 6,
             minValueSum: 0,
             costExponent: 0,
-            costFromWeight: 0,
         };
 
         const fields = [1, 2];
@@ -294,7 +292,6 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: 6,
             minValueSum: 0,
             costExponent: 0,
-            costFromWeight: 0,
         };
 
         const fields = [1, 2];
@@ -369,7 +366,6 @@ describe("Sequencer Test Data Integration", function () {
                 maxValueSum: "6",
                 minValueSum: "0",
                 costExponent: 0,
-                costFromWeight: false,
             },
         };
 
@@ -442,7 +438,6 @@ describe("Sequencer Test Data Integration", function () {
             maxValueSum: 6,
             minValueSum: 0,
             costExponent: 0,
-            costFromWeight: 0,
         };
 
         const inputs = builder.generateInputs(

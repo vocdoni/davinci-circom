@@ -6,7 +6,7 @@ include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/escalarmulany.circom";
 include "circomlib/circuits/escalarmulfix.circom";
 
-template ElGamal() {
+template ElGamal(msg_bits) {
     signal input encryption_pubkey[2]; // [pub] public key
     signal input msg;   // [priv] message to encrypt
     signal input k;     // [priv] random number
@@ -33,14 +33,13 @@ template ElGamal() {
     ];
 
     // encode the message as a point on the curve
-    var msg_bits = 32;
     component messageBits = Num2Bits(msg_bits);
     messageBits.in <== msg;
     component messagePoint = EscalarMulFix(msg_bits, base);
     for (var i=0; i<msg_bits; i++) {
         messageBits.out[i] ==> messagePoint.e[i];
     }
-    var k_bits = 254;
+    var k_bits = 254; // safe to treat k as a general BN254 field element.
     // c1 = k * base (escalarMulFix)
     component c1Point = EscalarMulFix(k_bits, base);
     component kBits = Num2Bits(k_bits);
