@@ -122,4 +122,4 @@ template BallotProof(n_fields) {
     voteIDChecker.vote_id <== vote_id;
 }
 
-component main {public [inputs_hash, address, vote_id]} = BallotProof(8);
+component main {public [inputs_hash, address, vote_id]} = BallotProof(16);
