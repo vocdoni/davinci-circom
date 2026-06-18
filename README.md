@@ -4,7 +4,7 @@ This repository includes the zkSnark circuits and cryptographic primitives that 
 
 The circuits are optimized for the **BN254** curve and use **Poseidon** for hashing and **BabyJubJub** for ElGamal encryption.
 
- * **Ballot checker** ([`ballot_checker.circom`](./circuits/ballot_checker.circom)): Checks that the ballot is valid under the params provided as inputs.
+ * **Ballot protocol** ([`ballot_protocol.circom`](./circuits/ballot_protocol.circom)): Unpacks the packed ballot mode and checks that the ballot is valid under those params (field limits, weights, quadratic cost, uniqueness).
  * **Ballot cipher** ([`ballot_cipher.circom`](./circuits/ballot_cipher.circom)): Encrypts the ballot fields using ElGamal on the BabyJubJub curve and checks if they match with the provided ones.
  * **Ballot proof** ([`ballot_proof.circom`](./circuits/ballot_proof.circom)): Checks the ballot and its encryption, calculates the vote ID, and verifies the hash of all inputs using Poseidon MultiHash. It exposes `inputs_hash`, `address`, and `vote_id` as public signals.
 
@@ -51,14 +51,24 @@ The state root leaf hashes use `processId`, `packedBallotMode`, and `censusOrigi
 
 ## Circuit Constraints
 
-Below are the constraint counts for the main circuits and components (configured with 8 voting fields):
+The circuit is compiled with a fixed capacity of **16 voting fields**
+(`BallotProof(16)` in [`ballot_proof.circom`](./circuits/ballot_proof.circom)).
+Measured R1CS over BN254:
 
-| Circuit | Constraints (BN254) | Description |
-| :--- | :--- | :--- |
-| **BallotChecker** | 1,877 | Validates ballot logic (limits, weights, quadratic cost) |
-| **BallotCipher** | 56,104 | ElGamal encryption of 8 fields on BabyJubJub |
-| **VoteIDChecker** | 518 | Computes and verifies Vote ID (Poseidon hash) |
-| **BallotProof** | **60,619** | **Total** (Includes all components + Input Hashing) |
+| Metric | Value |
+| :--- | ---: |
+| Constraints | 103,231 |
+| Wires | 103,030 |
+| Public inputs | 3 (`inputs_hash`, `address`, `vote_id`) |
+| Private inputs | 86 |
+| Labels | 483,795 |
+
+The ElGamal encryption of the ballot fields (`BallotCipher`) dominates the
+constraint count and scales roughly linearly with the field count; the ballot
+mode checks (`CheckBallotMode`) and Vote ID hashing (`VoteIDChecker`) are
+comparatively small. The Groth16 setup reuses the `2^18` Powers of Tau
+(`ppot_0080_18.ptau`, 262,144 max constraints), leaving ample headroom over the
+103,231 constraints used.
 
 ## Usage
 
