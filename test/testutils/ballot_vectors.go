@@ -8,10 +8,17 @@ import (
 
 	"github.com/vocdoni/davinci-node/spec"
 	spechash "github.com/vocdoni/davinci-node/spec/hash"
-	specparams "github.com/vocdoni/davinci-node/spec/params"
 	spectestutil "github.com/vocdoni/davinci-node/spec/testutil"
 	specutil "github.com/vocdoni/davinci-node/spec/util"
 )
+
+// ballotFieldCapacity is the compile-time field capacity of the ballot
+// circuit. It must match the BallotProof(N) instantiation in
+// circuits/ballot_proof.circom. It is deliberately not read from
+// spec/params.FieldsPerBallot: the pinned davinci-node/spec release still
+// reports 8 while this circuit is compiled at 16. Switch back to the spec
+// constant once a davinci-node release ships FieldsPerBallot=16.
+const ballotFieldCapacity = 16
 
 // BallotVectors holds a reproducible set of inputs for the ballot circuits.
 type BallotVectors struct {
@@ -42,7 +49,7 @@ func BuildBallotVectors() (*BallotVectors, error) {
 	if err != nil {
 		return nil, err
 	}
-	nFields := specparams.FieldsPerBallot
+	nFields := ballotFieldCapacity
 
 	fields := make([]int, nFields)
 	for i := range int(bm.NumFields) {
