@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as snarkjs from 'snarkjs';
-import { BallotBuilder } from '@vocdoni/davinci-circom';
+import { BallotBuilder, CIRCUIT_FIELD_CAPACITY } from '@vocdoni/davinci-circom';
 
 function App() {
   const [logs, setLogs] = useState([]);
@@ -20,7 +20,6 @@ function App() {
   
   // Config State
   const [config, setConfig] = useState({
-    numFields: 8,
     uniqueValues: 1,
     maxValue: 16,
     minValue: 0,
@@ -69,6 +68,12 @@ function App() {
         // Parse Inputs in Main Thread
         const fieldsArr = fieldsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
         const numFields = fieldsArr.length;
+        if (numFields < 1) {
+          throw new Error("Enter at least one vote choice.");
+        }
+        if (numFields > CIRCUIT_FIELD_CAPACITY) {
+          throw new Error(`Too many vote choices: ${numFields}. The circuit supports at most ${CIRCUIT_FIELD_CAPACITY} fields.`);
+        }
         const effectiveConfig = {
           ...config,
           numFields,
@@ -186,6 +191,11 @@ function App() {
     }
   };
 
+  const activeNumFields = fieldsStr
+    .split(',')
+    .map(s => parseInt(s.trim()))
+    .filter(n => !isNaN(n)).length;
+
   return (
     <div className="container mt-5 mb-5">
       <div className="card shadow-sm">
@@ -196,7 +206,7 @@ function App() {
           
           <div className="row mb-3">
             <div className="col-12 col-md-6 mb-2 mb-md-0">
-                <label className="form-label">Vote Choices (comma separated)</label>
+                <label className="form-label">Vote Choices (comma separated, max {CIRCUIT_FIELD_CAPACITY} fields)</label>
                 <input type="text" className="form-control" value={fieldsStr} onChange={e => setFieldsStr(e.target.value)} />
             </div>
             <div className="col-12 col-md-6">
@@ -255,8 +265,13 @@ function App() {
                   <input type="number" className="form-control" value={config.minValueSum} onChange={e => setConfig({...config, minValueSum: parseInt(e.target.value)})} />
                 </div>
                 <div className="col-6 col-md-4">
-                  <label className="form-label">Capacity</label>
-                  <input type="text" className="form-control" value="8 (Fixed)" disabled />
+                  <label className="form-label">Num Fields</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={`${activeNumFields} / ${CIRCUIT_FIELD_CAPACITY} (max)`}
+                    disabled
+                  />
                 </div>
                 <div className="col-12 mt-3">
                   <div className="form-check">
