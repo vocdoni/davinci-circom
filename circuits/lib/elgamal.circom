@@ -43,17 +43,9 @@ template ElGamal(msg_bits) {
     signal output c1[2]; // first point of the ciphertext
     signal output c2[2]; // second point of the ciphertext
 
-    // ensure that public key is on the curve and subgroup
-    component encryptionPubkeySubgroupCheck = BabyCheckPrimeSubgroup();
-    encryptionPubkeySubgroupCheck.x <== encryption_pubkey[0];
-    encryptionPubkeySubgroupCheck.y <== encryption_pubkey[1];
-    // ensure that the public key is not the identity point (0, 1)
-    component isz = IsZero();
-    isz.in <== encryption_pubkey[0];
-    component ise = IsEqual();
-    ise.in[0] <== encryption_pubkey[1];
-    ise.in[1] <== 1;
-    isz.out + ise.out === 0;
+    // NOTE: encryption_pubkey is validated once by the caller (prime-order
+    // subgroup + non-identity). It is shared across every field, so running the
+    // check here would repeat the same 253-bit scalar mul per field.
 
     // babyjubjub base point (generator)
     var base[2] = [

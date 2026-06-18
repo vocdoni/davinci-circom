@@ -1,11 +1,12 @@
 import { expect } from "chai";
-import { 
-    BallotBuilder, 
-    fromRTEtoTE, 
-    fromTEtoRTE, 
+import {
+    BallotBuilder,
+    fromRTEtoTE,
+    fromTEtoRTE,
     hexToDecimal,
-    FIELD_MODULUS, 
-    SCALING_FACTOR
+    FIELD_MODULUS,
+    SCALING_FACTOR,
+    CIRCUIT_FIELD_CAPACITY
 } from "../src/builder.js";
 import type { SequencerProcessData } from "../src/builder.js";
 import * as snarkjs from "snarkjs";
@@ -137,10 +138,10 @@ describe("Sequencer Test Data Integration", function () {
         console.log("  Encryption PubKey:", inputs.encryption_pubkey);
 
         // Validate the structure
-        expect(inputs.fields).to.have.lengthOf(8);
+        expect(inputs.fields).to.have.lengthOf(CIRCUIT_FIELD_CAPACITY);
         expect(inputs.fields.slice(0, 2)).to.deep.equal(fields);
         expect(inputs.packed_ballot_mode).to.equal(builder.packBallotMode(config).toString());
-        expect(inputs.cipherfields).to.have.lengthOf(8);
+        expect(inputs.cipherfields).to.have.lengthOf(CIRCUIT_FIELD_CAPACITY);
         expect(inputs.vote_id).to.be.a('string');
         expect(inputs.inputs_hash).to.be.a('string');
         expect(inputs.encryption_pubkey).to.have.lengthOf(2);

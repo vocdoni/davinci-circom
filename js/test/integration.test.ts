@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { buildElGamal } from "../src/elgamal.js";
 import { buildPoseidon } from "circomlibjs";
-import { BallotBuilder } from "../src/builder.js";
+import { BallotBuilder, CIRCUIT_FIELD_CAPACITY } from "../src/builder.js";
 
 describe("Integration: Poseidon + ElGamal", function () {
     let elgamal: any;
@@ -49,11 +49,11 @@ describe("Integration: Poseidon + ElGamal", function () {
 
         const inputs = builder.generateInputs(fields, 1, pubKey, processId, address, k, config);
 
-        expect(inputs.fields).to.have.lengthOf(8);
+        expect(inputs.fields).to.have.lengthOf(CIRCUIT_FIELD_CAPACITY);
         expect(inputs.fields.slice(0, 5)).to.deep.equal(fields);
-        expect(inputs.fields.slice(5)).to.deep.equal([0, 0, 0]);
+        expect(inputs.fields.slice(5)).to.deep.equal(new Array(CIRCUIT_FIELD_CAPACITY - 5).fill(0));
         expect(inputs.packed_ballot_mode).to.equal(builder.packBallotMode(config).toString());
-        expect(inputs.cipherfields).to.have.lengthOf(8);
+        expect(inputs.cipherfields).to.have.lengthOf(CIRCUIT_FIELD_CAPACITY);
         expect(inputs.inputs_hash).to.be.a('string');
     });
 });

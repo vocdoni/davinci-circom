@@ -57,18 +57,33 @@ Measured R1CS over BN254:
 
 | Metric | Value |
 | :--- | ---: |
-| Constraints | 103,231 |
-| Wires | 103,030 |
+| Constraints | 64,816 |
+| Wires | 64,660 |
 | Public inputs | 3 (`inputs_hash`, `address`, `vote_id`) |
 | Private inputs | 86 |
-| Labels | 483,795 |
+| Labels | 361,515 |
 
 The ElGamal encryption of the ballot fields (`BallotCipher`) dominates the
 constraint count and scales roughly linearly with the field count; the ballot
 mode checks (`CheckBallotMode`) and Vote ID hashing (`VoteIDChecker`) are
-comparatively small. The Groth16 setup reuses the `2^18` Powers of Tau
-(`ppot_0080_18.ptau`, 262,144 max constraints), leaving ample headroom over the
-103,231 constraints used.
+comparatively small. The shared encryption public key is validated once
+(prime-order subgroup + non-identity) in `BallotCipher` rather than inside each
+per-field `ElGamal` instance; hoisting that 253-bit variable-base scalar mul out
+of the loop cut the circuit from 103,231 to 64,816 constraints (−37%). The
+Groth16 setup reuses the `2^18` Powers of Tau (`ppot_0080_18.ptau`, 262,144 max
+constraints), leaving ample headroom over the 64,816 constraints used.
+
+### Artifact sizes
+
+| Artifact | File | Size |
+| :--- | :--- | ---: |
+| Proving key | `ballot_proof_pkey.zkey` | 35.5 MiB |
+| Witness generator | `ballot_proof.wasm` | 6.5 MiB |
+| Verification key | `ballot_proof_vkey.json` | 3.2 KiB |
+
+The proving key is the largest artifact a client needs: in-browser proving
+(the webapp) downloads both the `.zkey` and the `.wasm` before it can generate
+a proof.
 
 ## Usage
 

@@ -38,6 +38,18 @@ template BallotCipher(n_fields) {
     signal input cipherfields[n_fields][2][2];
     
     signal output valid_fields;
+    // validate the shared encryption public key once (prime-order subgroup +
+    // non-identity); the per-field ElGamal instances trust it and skip the
+    // re-check, which otherwise repeats a 253-bit scalar mul for every field.
+    component pubkeySubgroupCheck = BabyCheckPrimeSubgroup();
+    pubkeySubgroupCheck.x <== encryption_pubkey[0];
+    pubkeySubgroupCheck.y <== encryption_pubkey[1];
+    component pubkeyIsZeroX = IsZero();
+    pubkeyIsZeroX.in <== encryption_pubkey[0];
+    component pubkeyIsOneY = IsEqual();
+    pubkeyIsOneY.in[0] <== encryption_pubkey[1];
+    pubkeyIsOneY.in[1] <== 1;
+    pubkeyIsZeroX.out + pubkeyIsOneY.out === 0;
     // create components to encrypt the fields and compare the results
     component ciphers[n_fields];
     component fieldComparator[n_fields];
