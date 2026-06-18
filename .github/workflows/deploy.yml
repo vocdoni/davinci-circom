@@ -38,6 +38,15 @@ jobs:
           cp artifacts/ballot_proof_pkey.zkey webapp/public/
           cp artifacts/ballot_proof_vkey.json webapp/public/
 
+      # Build the local js package first so its own deps (snarkjs, typescript)
+      # are present when webapp's `npm install` re-runs its prepare/tsc.
+      # Without this the file:../js prepare runs tsc with no deps resolvable.
+      - name: Build js package
+        working-directory: ./js
+        run: |
+          npm install
+          npm run build
+
       - name: Install and Build
         working-directory: ./webapp
         run: |
