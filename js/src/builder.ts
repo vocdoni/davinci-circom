@@ -4,6 +4,10 @@ import type { CircuitSignals } from 'snarkjs';
 
 // BN254 scalar field modulus (Fr)
 export const FIELD_MODULUS = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
+// Ballot field capacity of the circuit. Must match BallotProof(N) in
+// circuits/ballot_proof.circom; inputs are padded to this many fields.
+export const CIRCUIT_FIELD_CAPACITY = 16;
 const VOTE_ID_MIN = 0x8000000000000000n;
 const VOTE_ID_HASH_BITS = 63n;
 
@@ -277,7 +281,7 @@ export class BallotBuilder {
      * @param address - Voter address as decimal string
      * @param k - Random k value for encryption
      * @param config - Ballot configuration
-     * @param circuitCapacity - Number of fields the circuit supports (default: 8)
+     * @param circuitCapacity - Number of fields the circuit supports (default: CIRCUIT_FIELD_CAPACITY)
      */
     generateInputs(
         fields: number[],
@@ -287,7 +291,7 @@ export class BallotBuilder {
         address: string,
         k: string,
         config: BallotConfig,
-        circuitCapacity: number = 8
+        circuitCapacity: number = CIRCUIT_FIELD_CAPACITY
     ): BallotInputs {
         const { cipherfields, paddedFields } = this.encryptFields(fields, pubKey, k, circuitCapacity);
         const voteId = this.computeVoteID(processId, address, k);
@@ -342,14 +346,14 @@ export class BallotBuilder {
      * @param fields - The vote field values
      * @param weight - The voter's weight
      * @param k - Optional random k value (generated if not provided)
-     * @param circuitCapacity - The number of fields the circuit supports (default: 8)
+     * @param circuitCapacity - The number of fields the circuit supports (default: CIRCUIT_FIELD_CAPACITY)
      */
     generateInputsFromSequencer(
         sequencerData: SequencerProcessData,
         fields: number[],
         weight: number,
         k?: string,
-        circuitCapacity: number = 8
+        circuitCapacity: number = CIRCUIT_FIELD_CAPACITY
     ): BallotInputs {
         // Convert process ID and address from hex to decimal
         const processId = hexToDecimal(sequencerData.processId);
