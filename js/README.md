@@ -412,6 +412,10 @@ The circuit artifacts are committed to the repository in the `artifacts/` direct
 - The webapp (copied at build time)
 - Go tests
 
+## Trusted Setup
+
+The committed `ballot_proof_pkey.zkey` and `ballot_proof_vkey.json` are the pre-production ceremony key (`"setup": "ceremony"`, three contributions plus a public beacon, see `CEREMONY.md` at the repository root). The sha256 of the verification key wire bytes is in `artifacts/VK_HASH` (`7caffddcd7ea38439cbb45789b810d8eafceca65cff93dbeaae409b2bf64e219`). Run `./prepare-circuit.sh` from the repository root to verify the committed zkey against the freshly compiled r1cs with `snarkjs zkey verify`; it never overwrites the key. `DEV_SETUP=1 ./prepare-circuit.sh` builds the deterministic development key into `artifacts/dev/` (anyone can forge proofs under it; never use it for a launched registry). A public multi-party ceremony replaces this pre-production key before public production.
+
 ## Dependencies
 
 - `circomlibjs` - Poseidon hash and BabyJubJub curve operations

@@ -20,8 +20,9 @@ jobs:
           go-version-file: go.mod
       - name: Compile circuits
         run: make prepare
-      # The dev setup is deterministic: a rebuild must reproduce the tracked
-      # artifacts byte for byte (TestDevVKHash also checks artifacts/DEV_VK_HASH).
+      # The wasm must rebuild byte for byte, and prepare-circuit.sh verifies
+      # the committed ceremony key against the fresh r1cs without rewriting it
+      # (TestVKHash checks artifacts/VK_HASH).
       - name: Artifacts reproducible
         run: git diff --exit-code --stat -- artifacts/
       - name: Describe version

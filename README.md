@@ -85,18 +85,27 @@ The proving key is the largest artifact a client needs: in-browser proving
 (the webapp) downloads both the `.zkey` and the `.wasm` before it can generate
 a proof.
 
-### Development setup
+### Trusted setup
 
-The tracked zkey and verification key come from a development setup:
-`prepare-circuit.sh` runs `snarkjs groth16 setup` on the Powers of Tau file and
-then two `snarkjs zkey beacon` steps keyed by hashes committed in the script,
-with circom pinned to 2.1.6. Every run reproduces the same bytes, and CI fails
-when `sha256` of the verification key wire bytes differs from
-`artifacts/DEV_VK_HASH`. The verification key carries `"setup": "dev"`.
+The tracked zkey and verification key are the pre-production ceremony key:
+three contributions plus a public beacon, described in
+[`CEREMONY.md`](./CEREMONY.md). The verification key carries
+`"setup": "ceremony"`, and the sha256 of its wire bytes is pinned in
+`artifacts/VK_HASH` (`7caffddcd7ea38439cbb45789b810d8eafceca65cff93dbeaae409b2bf64e219`).
 
-Anyone can recompute this setup's toxic waste and forge proofs under it. The
-dev key must never back a launched registry: the production ceremony replaces
-the zkey, the verification key and `DEV_VK_HASH`.
+To verify it, run `./prepare-circuit.sh`. It compiles the circuit with the
+pinned circom 2.1.6, runs `snarkjs zkey verify` of the committed zkey against
+the fresh r1cs and the Powers of Tau file, and fails unless the exported
+verification key equals the committed one and its delta differs from gamma. It
+never overwrites the committed key. `TestVKHash` checks the wire hash.
+
+`DEV_SETUP=1 ./prepare-circuit.sh` builds the deterministic development key
+instead (`snarkjs groth16 setup` plus two `zkey beacon` steps keyed by hashes in
+the script) into `artifacts/dev/`, which is gitignored. Anyone can reproduce
+that key and forge proofs under it, so it must never back a launched registry.
+
+A public multi-party ceremony replaces this pre-production key before public
+production.
 
 ## Usage
 

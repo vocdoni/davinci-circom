@@ -72,10 +72,10 @@ func vkWireHash(t *testing.T, vk *snarkjsVK) string {
 	return hex.EncodeToString(d[:])
 }
 
-// TestDevVKHash fails CI when `make prepare` no longer reproduces the pinned
-// dev key: the hash is pinned in davinci-zkvm, the registry deploy and the TS
-// SDK, so a change must be deliberate.
-func TestDevVKHash(t *testing.T) {
+// TestVKHash fails CI when the committed ceremony key (CEREMONY.md) changes:
+// the hash is pinned in davinci-zkvm, the registry deploy and the TS SDK, so a
+// change must be deliberate.
+func TestVKHash(t *testing.T) {
 	c := qt.New(t)
 	vkPath, err := testutils.GetArtifactPath(testutils.BallotProofVkey)
 	c.Assert(err, qt.IsNil)
@@ -84,16 +84,16 @@ func TestDevVKHash(t *testing.T) {
 	var vk snarkjsVK
 	c.Assert(json.Unmarshal(raw, &vk), qt.IsNil)
 
-	c.Assert(vk.Setup, qt.Equals, "dev")
+	c.Assert(vk.Setup, qt.Equals, "ceremony")
 	c.Assert(vk.NPublic, qt.Equals, 71)
 	c.Assert(vk.IC, qt.HasLen, 72)
 	c.Assert(vk.Delta, qt.Not(qt.DeepEquals), vk.Gamma, qt.Commentf("VK without a phase-2 contribution"))
 
-	pinPath, err := testutils.GetArtifactPath("DEV_VK_HASH")
+	pinPath, err := testutils.GetArtifactPath("VK_HASH")
 	c.Assert(err, qt.IsNil)
 	pin, err := os.ReadFile(pinPath)
 	c.Assert(err, qt.IsNil)
 	got := vkWireHash(t, &vk)
 	c.Assert(got, qt.Equals, strings.TrimSpace(string(pin)),
-		qt.Commentf("if the circuit or setup changed on purpose, write %s to artifacts/DEV_VK_HASH", got))
+		qt.Commentf("if the circuit or setup changed on purpose, write %s to artifacts/VK_HASH", got))
 }
