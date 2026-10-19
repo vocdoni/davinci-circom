@@ -1,75 +1,36 @@
 pragma circom 2.1.0;
 
-include "circomlib/circuits/poseidon.circom";
 include "circomlib/circuits/bitify.circom";
 
 include "ballot_protocol.circom";
 include "ballot_cipher.circom";
 
-include "./lib/multiposeidon.circom";
 include "./lib/vote_id.circom";
 
 // BallotProof is the circuit to prove a valid vote.
-// The vote is valid if it meets the Ballot Protocol requirements, but also if the
-// encrypted vote provided matches with the raw vote encrypted in this circuit.
+// The vote is valid if it meets the Ballot Protocol requirements, if the
+// encrypted vote provided matches the raw vote encrypted in this circuit, and
+// if the vote ID derives from the process ID, the address and k.
+//
+// snarkjs numbers public signals by declaration order, not by the order of
+// the `public` list in `main`, so the public inputs are declared first and in
+// the public-input layout (n = 7 + 4 * n_fields, 71 for BallotProof(16)):
+//   0 address, 1 vote_id, 2 process_id, 3 packed_ballot_mode,
+//   4 encryption_pubkey[0], 5 encryption_pubkey[1], 6 weight,
+//   7 + 4f + (0, 1, 2, 3) = cipherfields[f][0][0], [f][0][1], [f][1][0], [f][1][1].
+// test/public_order_test.go pins this order against the compiled .sym file.
 template BallotProof(n_fields) {
-    // Ballot inputs
-    signal input fields[n_fields];
-    signal input packed_ballot_mode;
+    // Public inputs, in layout order.
     signal input address;
-    signal input weight;
-    signal input process_id;
     signal input vote_id;
-    // ElGamal inputs
+    signal input process_id;
+    signal input packed_ballot_mode;
     signal input encryption_pubkey[2];
-    signal input k;
+    signal input weight;
     signal input cipherfields[n_fields][2][2];
-    // Inputs hash signal will include all the inputs that could be public
-    signal input inputs_hash;
-
-    // 0. Check the hash of the inputs (all pubprivate inputs)
-    //  a. Ballot metadata:
-    //      - packed_ballot_mode
-    //  b. ProcessID
-    //  c. Address
-    //  d. Weight
-    //  e. Encryption Key
-    //  f. Cipherfields
-    //  g. VoteID
-
-    // Order of inputs for hashing (matching standard/old implementation)
-    // 1. ProcessID
-    // 2. Packed ballot mode (1 field)
-    // 3. Encryption Key (2 fields)
-    // 4. Address
-    // 5. VoteID
-    // 6. Cipherfields (n_fields * 4)
-    // 7. Weight
-    
-    // Total inputs calculation:
-    // 1 (process_id) + 1 (packed_ballot_mode) + 2 (key) + 1 (address) + 1 (vote_id) + 4*n_fields + 1 (weight)
-    // = 7 + 4*n_fields
-
-    var static_inputs = 7; 
-    var cipherfields_inputs = 4 * n_fields;
-    var n_inputs = cipherfields_inputs + static_inputs; 
-    component inputs_hasher = MultiPoseidon(n_inputs);
-    var i = 0;
-    inputs_hasher.in[i] <== process_id; i++;
-    inputs_hasher.in[i] <== packed_ballot_mode; i++;
-    inputs_hasher.in[i] <== encryption_pubkey[0]; i++;
-    inputs_hasher.in[i] <== encryption_pubkey[1]; i++;
-    inputs_hasher.in[i] <== address; i++;
-    inputs_hasher.in[i] <== vote_id; i++;
-    for (var f = 0; f < n_fields; f++) {
-        inputs_hasher.in[i] <== cipherfields[f][0][0]; i++;
-        inputs_hasher.in[i] <== cipherfields[f][0][1]; i++;
-        inputs_hasher.in[i] <== cipherfields[f][1][0]; i++;
-        inputs_hasher.in[i] <== cipherfields[f][1][1]; i++;
-    }
-    inputs_hasher.in[i] <== weight; i++;
-    
-    inputs_hasher.out === inputs_hash;
+    // Private inputs.
+    signal input fields[n_fields];
+    signal input k;
 
     component unpack = UnpackBallotMode();
     unpack.packed <== packed_ballot_mode;
@@ -122,4 +83,4 @@ template BallotProof(n_fields) {
     voteIDChecker.vote_id <== vote_id;
 }
 
-component main {public [inputs_hash, address, vote_id]} = BallotProof(16);
+component main {public [address, vote_id, process_id, packed_ballot_mode, encryption_pubkey, weight, cipherfields]} = BallotProof(16);

@@ -31,7 +31,6 @@ type BallotVectors struct {
 	Address      *big.Int
 	K            *big.Int
 	VoteID       uint64
-	InputsHash   *big.Int
 	spec.BallotMode
 	PackedBallot *big.Int
 }
@@ -70,37 +69,18 @@ func BuildBallotVectors() (*BallotVectors, error) {
 	}
 
 	cipherfields := make([][2][2]*big.Int, nFields)
-	ballot := make([]*big.Int, 0, nFields*4)
 	for i := range nFields {
 		c1, c2 := Encrypt(big.NewInt(int64(fields[i])), pubX, pubY, ks[i+1])
 		cipherfields[i] = [2][2]*big.Int{
 			{new(big.Int).Set(&c1[0]), new(big.Int).Set(&c1[1])},
 			{new(big.Int).Set(&c2[0]), new(big.Int).Set(&c2[1])},
 		}
-		ballot = append(ballot,
-			cipherfields[i][0][0], cipherfields[i][0][1],
-			cipherfields[i][1][0], cipherfields[i][1][1],
-		)
 	}
 
 	processID := new(big.Int).SetBytes(randomBytes(20))
 	address := new(big.Int).SetBytes(randomBytes(20))
 
 	voteID, err := spec.VoteID(processID, address, k)
-	if err != nil {
-		return nil, err
-	}
-
-	inputsHash, err := spec.BallotInputsHashRTE(
-		processID,
-		bm,
-		pubX,
-		pubY,
-		address,
-		voteID,
-		ballot,
-		big.NewInt(int64(weight)),
-	)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +95,6 @@ func BuildBallotVectors() (*BallotVectors, error) {
 		Address:      address,
 		K:            k,
 		VoteID:       voteID,
-		InputsHash:   inputsHash,
 		BallotMode:   bm,
 		PackedBallot: packedBallot,
 	}, nil
@@ -132,9 +111,27 @@ func (b *BallotVectors) InputsMap() map[string]any {
 		"address":            b.Address.String(),
 		"k":                  b.K.String(),
 		"vote_id":            strconv.FormatUint(b.VoteID, 10),
-		"inputs_hash":        b.InputsHash.String(),
 		"packed_ballot_mode": b.PackedBallot.String(),
 	}
+}
+
+// PublicSignals returns the 71 public signals in circuit order: address,
+// vote_id, process_id, packed_ballot_mode, encryption_pubkey x and y, weight,
+// then c1.x, c1.y, c2.x, c2.y of every cipherfield.
+func (b *BallotVectors) PublicSignals() []string {
+	out := []string{
+		b.Address.String(),
+		strconv.FormatUint(b.VoteID, 10),
+		b.ProcessID.String(),
+		b.PackedBallot.String(),
+		b.PubKeyX.String(),
+		b.PubKeyY.String(),
+		strconv.Itoa(b.Weight),
+	}
+	for _, cf := range b.Cipherfields {
+		out = append(out, cf[0][0].String(), cf[0][1].String(), cf[1][0].String(), cf[1][1].String())
+	}
+	return out
 }
 
 // MarshalInputs returns the circom input JSON bytes.

@@ -28,3 +28,4 @@ artifacts/*
 !artifacts/ballot_proof_pkey.zkey
 !artifacts/ballot_proof_vkey.json
 !artifacts/embed.go
+!artifacts/DEV_VK_HASH

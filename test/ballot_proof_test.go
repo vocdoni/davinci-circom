@@ -3,10 +3,12 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"testing"
 
 	qt "github.com/frankban/quicktest"
+	"github.com/vocdoni/davinci-circom/circom2gnark"
 	"github.com/vocdoni/davinci-circom/test/testutils"
 )
 
@@ -52,4 +54,18 @@ func TestBallotProof(t *testing.T) {
 
 	err = testutils.VerifyProof(proof, publicSignals, vkey)
 	c.Assert(err, qt.IsNil)
+
+	// The public signals are the 71 circuit inputs in layout order.
+	var pubs []string
+	c.Assert(json.Unmarshal([]byte(publicSignals), &pubs), qt.IsNil)
+	c.Assert(pubs, qt.DeepEquals, vectors.PublicSignals())
+
+	// Changing any single public signal breaks the proof.
+	for i := range pubs {
+		bad := append([]string(nil), pubs...)
+		v, _ := new(big.Int).SetString(bad[i], 10)
+		bad[i] = v.Add(v, big.NewInt(1)).String()
+		ok, err := circom2gnark.VerifyCircomProofBN254(vkey, proof, bad)
+		c.Assert(err == nil && ok, qt.IsFalse, qt.Commentf("public signal %d changed", i))
+	}
 }

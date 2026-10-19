@@ -235,10 +235,14 @@ interface BallotInputs {
     address: string;
     k: string;
     vote_id: string;
-    inputs_hash: string;
     packed_ballot_mode: string;
 }
 ```
+
+`builder.publicSignals(inputs)` returns the proof's 71 public signals in circuit
+order (`address`, `vote_id`, `process_id`, `packed_ballot_mode`, the two
+encryption key coordinates, `weight`, then `c1.x, c1.y, c2.x, c2.y` per
+cipherfield), the array `snarkjs.groth16.fullProve` returns as `publicSignals`.
 
 #### `SequencerProcessData`
 
@@ -321,7 +325,6 @@ async function generateBallotProof() {
     );
 
     console.log("Vote ID:", inputs.vote_id);
-    console.log("Inputs Hash:", inputs.inputs_hash);
 
     // 5. Generate the proof using snarkjs
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(

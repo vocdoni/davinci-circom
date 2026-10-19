@@ -6,7 +6,7 @@ The circuits are optimized for the **BN254** curve and use **Poseidon** for hash
 
  * **Ballot protocol** ([`ballot_protocol.circom`](./circuits/ballot_protocol.circom)): Unpacks the packed ballot mode and checks that the ballot is valid under those params (field limits, weights, quadratic cost, uniqueness).
  * **Ballot cipher** ([`ballot_cipher.circom`](./circuits/ballot_cipher.circom)): Encrypts the ballot fields using ElGamal on the BabyJubJub curve and checks if they match with the provided ones.
- * **Ballot proof** ([`ballot_proof.circom`](./circuits/ballot_proof.circom)): Checks the ballot and its encryption, calculates the vote ID, and verifies the hash of all inputs using Poseidon MultiHash. It exposes `inputs_hash`, `address`, and `vote_id` as public signals.
+ * **Ballot proof** ([`ballot_proof.circom`](./circuits/ballot_proof.circom)): Checks the ballot and its encryption and calculates the vote ID. Every value a verifier needs is a public signal (71 for `BallotProof(16)`), in this order: `address`, `vote_id`, `process_id`, `packed_ballot_mode`, `encryption_pubkey[0..1]`, `weight`, then `c1.x, c1.y, c2.x, c2.y` of each of the 16 cipherfields. `test/public_order_test.go` pins the order against the compiled `.sym` file.
 
 ## BallotMode Packed Serialization (State Root)
 
@@ -57,11 +57,11 @@ Measured R1CS over BN254:
 
 | Metric | Value |
 | :--- | ---: |
-| Constraints | 64,816 |
-| Wires | 64,660 |
-| Public inputs | 3 (`inputs_hash`, `address`, `vote_id`) |
-| Private inputs | 86 |
-| Labels | 361,515 |
+| Constraints | 61,678 |
+| Wires | 61,522 |
+| Public inputs | 71 |
+| Private inputs | 17 (`fields[16]`, `k`) |
+| Labels | 343,524 |
 
 The ElGamal encryption of the ballot fields (`BallotCipher`) dominates the
 constraint count and scales roughly linearly with the field count; the ballot
@@ -77,13 +77,26 @@ constraints), leaving ample headroom over the 64,816 constraints used.
 
 | Artifact | File | Size |
 | :--- | :--- | ---: |
-| Proving key | `ballot_proof_pkey.zkey` | 35.5 MiB |
-| Witness generator | `ballot_proof.wasm` | 6.5 MiB |
-| Verification key | `ballot_proof_vkey.json` | 3.2 KiB |
+| Proving key | `ballot_proof_pkey.zkey` | 31.1 MiB |
+| Witness generator | `ballot_proof.wasm` | 2.3 MiB |
+| Verification key | `ballot_proof_vkey.json` | 15.4 KiB |
 
 The proving key is the largest artifact a client needs: in-browser proving
 (the webapp) downloads both the `.zkey` and the `.wasm` before it can generate
 a proof.
+
+### Development setup
+
+The tracked zkey and verification key come from a development setup:
+`prepare-circuit.sh` runs `snarkjs groth16 setup` on the Powers of Tau file and
+then two `snarkjs zkey beacon` steps keyed by hashes committed in the script,
+with circom pinned to 2.1.6. Every run reproduces the same bytes, and CI fails
+when `sha256` of the verification key wire bytes differs from
+`artifacts/DEV_VK_HASH`. The verification key carries `"setup": "dev"`.
+
+Anyone can recompute this setup's toxic waste and forge proofs under it. The
+dev key must never back a launched registry: the production ceremony replaces
+the zkey, the verification key and `DEV_VK_HASH`.
 
 ## Usage
 

@@ -134,7 +134,6 @@ describe("Sequencer Test Data Integration", function () {
 
         console.log("\nGenerated inputs:");
         console.log("  Vote ID:", inputs.vote_id);
-        console.log("  Inputs Hash:", inputs.inputs_hash);
         console.log("  Encryption PubKey:", inputs.encryption_pubkey);
 
         // Validate the structure
@@ -143,7 +142,6 @@ describe("Sequencer Test Data Integration", function () {
         expect(inputs.packed_ballot_mode).to.equal(builder.packBallotMode(config).toString());
         expect(inputs.cipherfields).to.have.lengthOf(CIRCUIT_FIELD_CAPACITY);
         expect(inputs.vote_id).to.be.a('string');
-        expect(inputs.inputs_hash).to.be.a('string');
         expect(inputs.encryption_pubkey).to.have.lengthOf(2);
 
         // The encryption pubkey should match the TE converted values
@@ -236,7 +234,6 @@ describe("Sequencer Test Data Integration", function () {
             encryption_pubkey: inputs.encryption_pubkey,
             k: inputs.k,
             cipherfields: inputs.cipherfields,
-            inputs_hash: inputs.inputs_hash,
         };
 
         console.log("\nCircuit inputs JSON:");
@@ -248,7 +245,6 @@ describe("Sequencer Test Data Integration", function () {
 
         expect(parsed.fields).to.deep.equal(inputs.fields);
         expect(parsed.vote_id).to.equal(inputs.vote_id);
-        expect(parsed.inputs_hash).to.equal(inputs.inputs_hash);
     });
 
     it("should generate a valid zkProof with snarkjs", async function() {
@@ -330,11 +326,13 @@ describe("Sequencer Test Data Integration", function () {
 
         expect(isValid).to.be.true;
 
-        // Check that public signals match expected values
-        // Public signals order from snarkjs: address, vote_id, inputs_hash
-        expect(publicSignals[0]).to.equal(inputs.address);
-        expect(publicSignals[1]).to.equal(inputs.vote_id);
-        expect(publicSignals[2]).to.equal(inputs.inputs_hash);
+        // The 71 public signals are the circuit inputs in layout order.
+        expect(publicSignals).to.deep.equal(builder.publicSignals(inputs));
+
+        // Changing one public signal breaks the proof.
+        const tampered = [...publicSignals];
+        tampered[9] = (BigInt(tampered[9]) + 1n).toString();
+        expect(await snarkjs.groth16.verify(vkey, tampered, proof)).to.be.false;
     });
 
     it("should generate inputs using generateInputsFromSequencer helper", async function() {
@@ -385,7 +383,6 @@ describe("Sequencer Test Data Integration", function () {
         console.log("  Process ID:", inputs.process_id);
         console.log("  Address:", inputs.address);
         console.log("  Vote ID:", inputs.vote_id);
-        console.log("  Inputs Hash:", inputs.inputs_hash);
 
         // Generate and verify proof
         const { proof, publicSignals } = await snarkjs.groth16.fullProve(
@@ -401,9 +398,7 @@ describe("Sequencer Test Data Integration", function () {
         expect(isValid).to.be.true;
 
         // Verify public signals match
-        expect(publicSignals[0]).to.equal(inputs.address);
-        expect(publicSignals[1]).to.equal(inputs.vote_id);
-        expect(publicSignals[2]).to.equal(inputs.inputs_hash);
+        expect(publicSignals).to.deep.equal(builder.publicSignals(inputs));
     });
 
     it("should work with createPubKeyFromRTE helper", async function() {

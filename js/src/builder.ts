@@ -134,7 +134,6 @@ export interface BallotInputs extends CircuitSignals {
     address: string;
     k: string;
     vote_id: string;
-    inputs_hash: string;
     packed_ballot_mode: string;
 }
 
@@ -172,28 +171,6 @@ export class BallotBuilder {
         return out;
     }
 
-    // Matches circuits/lib/multiposeidon.circom logic
-    multiHash(inputs: bigint[]): bigint {
-        const nInputs = inputs.length;
-        if (nInputs <= 16) {
-            return this.F.toObject(this.poseidon(inputs));
-        }
-
-        // Split into chunks of 16
-        const chunks: bigint[][] = [];
-        for (let i = 0; i < nInputs; i += 16) {
-            chunks.push(inputs.slice(i, i + 16));
-        }
-
-        const intermediateHashes: bigint[] = [];
-        for (const chunk of chunks) {
-            intermediateHashes.push(this.F.toObject(this.poseidon(chunk)));
-        }
-
-        // Hash the chunk hashes
-        return this.F.toObject(this.poseidon(intermediateHashes));
-    }
-
     encryptFields(fields: number[], pubKey: any, seedK: string, nFields: number) {
         const paddedFields = [...fields];
         while (paddedFields.length < nFields) {
@@ -223,10 +200,6 @@ export class BallotBuilder {
         // Match spec.VoteID: low 63 bits of hash plus VoteIDMin.
         const mask = (1n << VOTE_ID_HASH_BITS) - 1n;
         return ((hBig & mask) + VOTE_ID_MIN).toString();
-    }
-
-    computeInputsHash(inputs: any[]): string {
-        return this.multiHash(inputs).toString();
     }
 
     packBallotMode(config: BallotConfig): bigint {
@@ -297,29 +270,6 @@ export class BallotBuilder {
         const voteId = this.computeVoteID(processId, address, k);
         const packedBallotMode = this.packBallotMode(config);
 
-        // Build Inputs Hash - MUST MATCH ballot_proof.circom ORDER
-        const inputsList: any[] = [];
-        
-        inputsList.push(BigInt(processId));
-        inputsList.push(mod(packedBallotMode, FIELD_MODULUS));
-        
-        inputsList.push(BigInt(this.elgamal.F.toString(pubKey[0], 10)));
-        inputsList.push(BigInt(this.elgamal.F.toString(pubKey[1], 10)));
-        
-        inputsList.push(BigInt(address));
-        inputsList.push(BigInt(voteId));
-        
-        for (const cf of cipherfields) {
-            inputsList.push(BigInt(cf[0][0]));
-            inputsList.push(BigInt(cf[0][1]));
-            inputsList.push(BigInt(cf[1][0]));
-            inputsList.push(BigInt(cf[1][1]));
-        }
-        
-        inputsList.push(BigInt(weight));
-
-        const inputsHash = this.computeInputsHash(inputsList);
-
         return {
             fields: paddedFields,
             weight,
@@ -332,9 +282,31 @@ export class BallotBuilder {
             address,
             k,
             vote_id: voteId,
-            inputs_hash: inputsHash,
             packed_ballot_mode: packedBallotMode.toString(),
         };
+    }
+
+    /**
+     * The 71 public signals of a proof over `inputs`, in circuit order:
+     * address, vote_id, process_id, packed_ballot_mode, encryption_pubkey x and
+     * y, weight, then c1.x, c1.y, c2.x, c2.y of every cipherfield. This is the
+     * `publicSignals` array snarkjs returns (each value reduced mod r, as the
+     * circuit sees it).
+     */
+    publicSignals(inputs: BallotInputs): string[] {
+        const values = [
+            inputs.address,
+            inputs.vote_id,
+            inputs.process_id,
+            inputs.packed_ballot_mode,
+            inputs.encryption_pubkey[0],
+            inputs.encryption_pubkey[1],
+            inputs.weight.toString(),
+        ];
+        for (const cf of inputs.cipherfields) {
+            values.push(cf[0][0], cf[0][1], cf[1][0], cf[1][1]);
+        }
+        return values.map((v) => mod(BigInt(v), FIELD_MODULUS).toString());
     }
 
     /**

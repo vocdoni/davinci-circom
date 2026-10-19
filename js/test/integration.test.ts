@@ -54,6 +54,13 @@ describe("Integration: Poseidon + ElGamal", function () {
         expect(inputs.fields.slice(5)).to.deep.equal(new Array(CIRCUIT_FIELD_CAPACITY - 5).fill(0));
         expect(inputs.packed_ballot_mode).to.equal(builder.packBallotMode(config).toString());
         expect(inputs.cipherfields).to.have.lengthOf(CIRCUIT_FIELD_CAPACITY);
-        expect(inputs.inputs_hash).to.be.a('string');
+        expect(inputs).to.not.have.property('inputs_hash');
+        const pubs = builder.publicSignals(inputs);
+        expect(pubs).to.have.lengthOf(7 + 4 * CIRCUIT_FIELD_CAPACITY);
+        expect(pubs.slice(0, 7)).to.deep.equal([
+            "456", inputs.vote_id, "123", inputs.packed_ballot_mode,
+            inputs.encryption_pubkey[0], inputs.encryption_pubkey[1], "1",
+        ]);
+        expect(pubs.slice(7, 11)).to.deep.equal(inputs.cipherfields[0].flat());
     });
 });

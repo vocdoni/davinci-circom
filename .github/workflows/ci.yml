@@ -20,6 +20,10 @@ jobs:
           go-version-file: go.mod
       - name: Compile circuits
         run: make prepare
+      # The dev setup is deterministic: a rebuild must reproduce the tracked
+      # artifacts byte for byte (TestDevVKHash also checks artifacts/DEV_VK_HASH).
+      - name: Artifacts reproducible
+        run: git diff --exit-code --stat -- artifacts/
       - name: Describe version
         uses: choffmeister/git-describe-semver@main
         id: git-describe-semver

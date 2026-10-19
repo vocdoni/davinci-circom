@@ -27,7 +27,7 @@ const (
 // aggregationCircuit verifies numProofs BN254 Groth16 proofs inside BN254.
 type aggregationCircuit struct {
 	Proofs       [numProofs]stdgroth16.Proof[sw_bn254.G1Affine, sw_bn254.G2Affine]
-	PublicInputs [numProofs][3]emulated.Element[sw_bn254.ScalarField]                         `gnark:",public"`
+	PublicInputs [numProofs][71]emulated.Element[sw_bn254.ScalarField]                         `gnark:",public"`
 	VerifyingKey stdgroth16.VerifyingKey[sw_bn254.G1Affine, sw_bn254.G2Affine, sw_bn254.GTEl] `gnark:"-"`
 }
 
@@ -129,8 +129,8 @@ func TestCircomAggregation(t *testing.T) {
 	assignment := &aggregationCircuit{VerifyingKey: placeholder.Vk}
 	for i := 0; i < numProofs; i++ {
 		assignment.Proofs[i] = recProofs[i].Proof
-		if len(recProofs[i].PublicInputs.Public) != 3 {
-			c.Fatal("Expected 3 public inputs, got", len(recProofs[i].PublicInputs.Public))
+		if len(recProofs[i].PublicInputs.Public) != 71 {
+			c.Fatal("Expected 71 public inputs, got", len(recProofs[i].PublicInputs.Public))
 		}
 		copy(assignment.PublicInputs[i][:], recProofs[i].PublicInputs.Public)
 	}
