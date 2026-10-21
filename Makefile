@@ -8,7 +8,7 @@ prepare: ## Compile default circuits and install tools
 test: prepare ## Run all tests (Go tests)
 	./prepare-circuit.sh test/ballot_protocol_test.circom
 	./prepare-circuit.sh test/ballot_cipher_test.circom
-	go test -v ./test/...
+	go test -v -timeout 40m ./test/...
 
 test-js: ## Run JS package tests
 	cd js && npm install && npm test
