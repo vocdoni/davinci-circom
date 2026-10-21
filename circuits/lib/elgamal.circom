@@ -14,14 +14,15 @@ template BabyCheckPrimeSubgroup() {
     onCurve.x <== x;
     onCurve.y <== y;
 
-    component orderBits = Num2Bits(253);
-    orderBits.in <== 2736030358979909402780800718157159386076813972158567259200215660948447373041;
+    // The subgroup order l, fed bit by bit as constants: a decomposition
+    // computed in-circuit would leave the prover a choice of bits.
+    var order = 2736030358979909402780800718157159386076813972158567259200215660948447373041;
 
     component subgroupMul = EscalarMulAny(253);
     subgroupMul.p[0] <== x;
     subgroupMul.p[1] <== y;
     for (var i = 0; i < 253; i++) {
-        orderBits.out[i] ==> subgroupMul.e[i];
+        subgroupMul.e[i] <== (order >> i) & 1;
     }
 
     component isIdentityX = IsZero();

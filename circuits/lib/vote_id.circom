@@ -19,8 +19,9 @@ template VoteIDChecker() {
     hasher.inputs[0] <== process_id;
     hasher.inputs[1] <== address;
     hasher.inputs[2] <== k;
-    // bit decomposition of the hash output
-    component bits = Num2Bits(254);
+    // strict bit decomposition of the hash output: a plain Num2Bits(254) also
+    // accepts the bits of hash + p, a second vote id for the same k
+    component bits = Num2Bits_strict();
     bits.in <== hasher.out;
     // reconstruct the lowest 63 bits as the truncated hash
     signal res[VOTE_ID_BITS+1];

@@ -29,3 +29,6 @@ artifacts/*
 !artifacts/ballot_proof_vkey.json
 !artifacts/embed.go
 !artifacts/VK_HASH
+
+# Soundness test build output (test/soundness_*_test.go)
+test/soundness_out/

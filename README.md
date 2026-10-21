@@ -45,6 +45,12 @@ packed =
 
 Any value that exceeds its bit width makes the serialization invalid.
 
+The cost sum is compared with its bounds at 89 bits (`ValueSumCmpBits`), not at
+the 63 bits of the packed sums: in weight-budget mode (`maxValueSum = 0`) the
+upper bound is the voter weight, which goes up to 2^88 − 1. The registry
+refuses a mode whose largest cost `numFields · maxValue^costExponent` reaches
+2^63 (or whose `costExponent` is 0), so the cost never wraps in the field.
+
 ### State Root Leaf Usage
 
 The state root leaf hashes use `processId`, `packedBallotMode`, and `censusOrigin` directly as Poseidon inputs (no 1‑element Poseidon). Inputs are interpreted modulo the BN254 scalar field.
@@ -57,11 +63,11 @@ Measured R1CS over BN254:
 
 | Metric | Value |
 | :--- | ---: |
-| Constraints | 61,678 |
-| Wires | 61,522 |
+| Constraints | 61,232 |
+| Wires | 61,076 |
 | Public inputs | 71 |
 | Private inputs | 17 (`fields[16]`, `k`) |
-| Labels | 343,524 |
+| Labels | 344,350 |
 
 The ElGamal encryption of the ballot fields (`BallotCipher`) dominates the
 constraint count and scales roughly linearly with the field count; the ballot
@@ -71,7 +77,7 @@ comparatively small. The shared encryption public key is validated once
 per-field `ElGamal` instance; hoisting that 253-bit variable-base scalar mul out
 of the loop cut the circuit from 103,231 to 64,816 constraints (−37%). The
 Groth16 setup reuses the `2^18` Powers of Tau (`ppot_0080_18.ptau`, 262,144 max
-constraints), leaving ample headroom over the 64,816 constraints used.
+constraints), leaving ample headroom over the 61,232 constraints used.
 
 ### Artifact sizes
 
@@ -91,7 +97,7 @@ The tracked zkey and verification key are the pre-production ceremony key:
 three contributions plus a public beacon, described in
 [`CEREMONY.md`](./CEREMONY.md). The verification key carries
 `"setup": "ceremony"`, and the sha256 of its wire bytes is pinned in
-`artifacts/VK_HASH` (`7caffddcd7ea38439cbb45789b810d8eafceca65cff93dbeaae409b2bf64e219`).
+`artifacts/VK_HASH` (`67e8e6b47ea32cf144d6e72886f02b95ed068b157f9d4ccc8e97f335858e4963`).
 
 To verify it, run `./prepare-circuit.sh`. It compiles the circuit with the
 pinned circom 2.1.6, runs `snarkjs zkey verify` of the committed zkey against

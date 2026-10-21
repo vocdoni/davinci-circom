@@ -15,6 +15,11 @@ function MaxValueBits() { return 48; }
 function MinValueBits() { return 48; }
 function MaxValueSumBits() { return 63; }
 function MinValueSumBits() { return 63; }
+// Width of the two budget comparators. The weight operand is up to 88 bits
+// (census and CSP weights are below 2^88), so 63 bits would make the upper
+// bound refuse honest ballots; 89 keeps both sides below 2^89. The sums
+// themselves stay 63-bit fields of the packed mode.
+function ValueSumCmpBits() { return 89; }
 
 // UnpackBallotMode template receives a single signal with the packed Ballot 
 // Mode in 247 bits. It returns the following decoded signals:
@@ -178,13 +183,13 @@ template CheckBallotMode(n_fields) {
     finalMax.sel <== maxValueFromWeight;
 
     // check upper bound: value_sum <= (max_value_sum or weight)
-    component validValueForMax = LessEqThan(MaxValueSumBits());
+    component validValueForMax = LessEqThan(ValueSumCmpBits());
     validValueForMax.in[0] <== value_sum;
     validValueForMax.in[1] <== finalMax.out;
     validValueForMax.out === 1;
 
     // check lower bound: min_value_sum <= value_sum
-    component validValueForMin = LessEqThan(MinValueSumBits());
+    component validValueForMin = LessEqThan(ValueSumCmpBits());
     validValueForMin.in[0] <== min_value_sum;
     validValueForMin.in[1] <== value_sum; 
     validValueForMin.out === 1;
